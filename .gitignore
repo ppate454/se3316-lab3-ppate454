@@ -2,6 +2,10 @@
 superhero_info.json
 superhero_powers.json
 
+# Launching
+.vscode
+launch.json
+
 # Logs
 logs
 *.log

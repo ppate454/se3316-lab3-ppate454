@@ -1,10 +1,18 @@
 const express = require('express');
 const app = express();
 const port = 3000;
+const router = express.Router();
 const superInfo = require('./superhero_info.json');
 const superPowers = require('./superhero_powers.json');
 
 app.use('/', express.static('client'))
+
+app.use((req, res, next) => {
+    console.log(`${req.method} request for ${req.url}`);
+    next();
+});
+
+router.use(express.json())
 
 app.route('/api/superInfo/:id')
     .get((req, res) => {
@@ -42,12 +50,17 @@ app.route('/api/superPowers/:id')
 app.get('/api/superPublisher', (req,res) => {
     console.log(`GET request for ${req.url}`);
     const publishers = [...new Set(superInfo.map((p) => p.Publisher))];
-    res.json(publishers);
+    res.send(publishers);
 });
 
 app.get('/api/superInfo', (req,res) => {
     console.log(`GET request for ${req.url}`);
     res.send(superInfo);
+});
+
+app.get('/api/superPower', (req,res) => {
+    console.log(`GET request for ${req.url}`);
+    res.send(superPowers);
 });
 
 app.get('/api/search', (req, res) => {
@@ -63,7 +76,7 @@ app.get('/api/search', (req, res) => {
             }
         }
     }
-    res.json(matchingSuper)
+    res.send(matchingSuper)
 });
 
 app.listen(port, () => {

@@ -12,6 +12,7 @@
     </div>
     
     <div class = search>
+        <h2>Search Function</h2>
         <input type="search" placeholder="Search by name..." id="search-name">
         <button type="submit" onclick="searchName()">Search</button>
 
@@ -24,7 +25,19 @@
         <input type="search" placeholder="Search by power..." id="search-power">
         <button type="submit" onclick="searchPower()">Search</button>
     </div>
+    <div class = sort>
+        <h2>Sort Functions</h2>
+        <button type="submit" onclick ="sortName()">Sort by Name</button>
+        <button type="submit" onclick ="sortRace()">Sort by Race</button>
+        <button type="submit" onclick ="sortPublisher()">Sort by Publisher</button>
+        <button type="submit" onclick ="sortPower()">Sort by Power</button>
+    </div>
+
+    <div>
+        <h2 id=result-tag>Search Result</h2>  
+        <pre id=search-result></pre>
+    </div>
    
-    <script src="./script.js"></script> 
+    <script src="script.js"></script> 
 </body>
 </html>
