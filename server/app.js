@@ -4,6 +4,8 @@ const port = 3000;
 const router = express.Router();
 const superInfo = require('./superhero_info.json');
 const superPowers = require('./superhero_powers.json');
+const Storage = require('node-storage');
+const store = new Storage('./server/db.json')
 
 app.use('/', express.static('client'))
 
@@ -41,7 +43,7 @@ app.route('/api/superPowers/:id')
                     powers.push(check);
                 }
             }
-            res.json(powers);
+            res.send(powers);
         } else {                
             res.status(404).send(`Part ${id} was not found`);
         }
@@ -78,6 +80,39 @@ app.get('/api/search', (req, res) => {
     }
     res.send(matchingSuper)
 });
+
+//add error handling and route it for get function
+app.post('/api/list/:list', (req, res) => {
+    console.log(`POST request for ${req.url}`);
+    const list = req.params.list;
+    store.put(list, []);
+    res.send(req.body);
+});
+
+app.get('/api/list/:list', (req, res) => {
+    console.log(`GET request for ${req.url}`);
+    const list = req.params.list;
+    const heroes = store.get(list);
+    if (heroes == null || heroes == undefined) {
+        res.status(404).send(`List ${list} was not found`);
+    } else {
+        res.send(heroes);
+    }
+});
+
+app.delete('/api/list/:list', (req, res) => {
+    console.log(`DELETE request for ${req.url}`);
+    const list = req.params.list;
+    if (heroes == null || heroes == undefined) {
+        res.status(404).send(`List ${list} was not found`);
+    } else {
+        store.remove(list);
+        res.send(`List ${list} was deleted`);
+    }
+});
+
+//use post and get for specific ids catching
+
 
 app.listen(port, () => {
     console.log(`Listening on port ${port}`);

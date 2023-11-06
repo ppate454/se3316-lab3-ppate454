@@ -1,6 +1,7 @@
 # Data
 superhero_info.json
 superhero_powers.json
+db.json
 
 # Launching
 .vscode
