@@ -85,7 +85,7 @@ app.get('/api/search', (req, res) => {
 app.post('/api/list/:list', (req, res) => {
     console.log(`POST request for ${req.url}`);
     const list = req.params.list;
-    store.put(list, []);
+    store.put(list, {});
     res.send(req.body);
 });
 
@@ -103,7 +103,7 @@ app.get('/api/list/:list', (req, res) => {
 app.delete('/api/list/:list', (req, res) => {
     console.log(`DELETE request for ${req.url}`);
     const list = req.params.list;
-    if (heroes == null || heroes == undefined) {
+    if (list == null || list == undefined) {
         res.status(404).send(`List ${list} was not found`);
     } else {
         store.remove(list);
@@ -111,7 +111,28 @@ app.delete('/api/list/:list', (req, res) => {
     }
 });
 
-//use post and get for specific ids catching
+//use post and get for specific ids catching and then do routing
+app.post('/api/listID/:list/:id', (req, res) => {
+    console.log(`GET request for ${req.url}`);
+    const list = req.params.list;
+    const id = req.params.list;
+
+    for (x of id) {
+        const heroes = superInfo.find(s => s.id === parseInt(id));
+
+    }
+});
+
+app.get('/api/listID/:list', (req, res) => {
+    const list = req.params.list;
+    const heroes = store.get(list);
+    if (heroes == null || heroes == undefined) {
+        res.status(404).send(`List ${list} was not found`);
+    } else {
+        const heroesID = Object.keys(heroes).map(key => parseInt(key, 10));
+        res.send(heroesID)
+    }
+});
 
 
 app.listen(port, () => {
