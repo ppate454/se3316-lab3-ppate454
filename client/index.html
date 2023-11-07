@@ -32,7 +32,37 @@
         <button type="submit" onclick ="sortPublisher()">Sort by Publisher</button>
         <button type="submit" onclick ="sortPower()">Sort by Power</button>
     </div>
-
+    <div class = list>
+        <h2>List Functions</h2>
+        <div>
+            <label for="create_list">Create a List:</label>
+            <div>
+                <input type="text" placeholder="Enter list name..." id="create-list">
+                <button type="submit" onclick="createList()">Create</button>
+            </div>
+        </div>
+        <div>
+            <label for="select_list">Select a List:</label>
+            <select name="lists" id="list-drop">
+                <option value="">Select an option</option>
+            </select>
+        </div>
+        <div>
+            <label for="manage_list">Manage List Selected:</label>
+            <div>
+                <button type="submit" onclick="displayList()">Display List</button>
+            </div>
+            <div>
+                <button type="submit" onclick="displayListID()">Display List by ID</button>
+            </div>
+            <div>
+                <input type="text" placeholder="Enter IDs (seperated by ,)..." id="update-list">
+                <button type="submit" onclick="updateList()">Update List</button>
+            </div>
+            <div>
+                <button type="submit" onclick="deleteList()">Delete List</button>
+            </div>
+        </div>
     <div>
         <h2 id=result-tag>Search Result</h2>  
         <pre id=search-result></pre>

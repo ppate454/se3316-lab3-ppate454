@@ -12,9 +12,8 @@ function searchName() {
 }
 
 /*function searchPower() {
-    const input = document.getElementById('search-power')
-    const term = input.value;
-    fetch("/api/superInfo") 
+
+    fetch("") 
     .then(res => res.json()
     .then(data => {
        
@@ -115,3 +114,4 @@ function sortPublisher() {
 function sortPower() {
 
 } */
+
