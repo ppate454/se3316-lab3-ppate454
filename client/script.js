@@ -131,3 +131,40 @@ function createList() {
         resultDisplay.textContent = (`List ${term} created!`);
     })
 }
+
+function displayList() {
+    const dropdown = document.getElementById('list-drop')
+    const term = dropdown.value
+    fetch(`/api/list/${term}`)
+        .then(res => res.json()
+        .then(data => {
+            const resultDisplay = document.getElementById("search-result");
+            resultDisplay.textContent = JSON.stringify(data, null, 2);
+        }))
+}
+
+function displayListID() {
+    const dropdown = document.getElementById('list-drop')
+    const term = dropdown.value
+    fetch(`/api/listID/${term}`)
+        .then(res => res.json()
+        .then(data => {
+            const resultDisplay = document.getElementById("search-result");
+            resultDisplay.textContent = JSON.stringify(data, null, 2);
+        }))
+}
+
+function updateList() {
+    const input = document.getElementById('update-list')
+    const term = input.value
+    const dropdown = document.getElementById('list-drop')
+    const drop = dropdown.value
+    fetch(`/api/listID/${drop}/${term}`, {
+        method: 'POST',
+        headers: {'Content-type': 'application/json'},
+    })
+    .then(res => {
+        const resultDisplay = document.getElementById("search-result");
+        resultDisplay.textContent = (`List ${drop} updated!`);
+    })
+}
