@@ -168,3 +168,17 @@ function updateList() {
         resultDisplay.textContent = (`List ${drop} updated!`);
     })
 }
+
+function deleteList() {
+    const dropdown = document.getElementById('list-drop')
+    const term = dropdown.value
+    fetch(`/api/list/${term}`, {
+        method: 'DELETE',
+    })
+    .then(res => {
+        const resultDisplay = document.getElementById("search-result");
+        resultDisplay.textContent = (`List ${term} deleted!`);
+        const selectedOption = dropdown.querySelector(`option[value="${term}"]`)
+        dropdown.removeChild(selectedOption)
+    })
+}
