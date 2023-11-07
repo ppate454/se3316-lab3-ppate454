@@ -114,4 +114,20 @@ function sortPublisher() {
 function sortPower() {
 
 } */
-
+function createList() {
+    const input = document.getElementById('create-list')
+    const term = input.value;
+    const dropdown = document.getElementById('list-drop')
+    fetch(`/api/list/${term}`, {
+        method: 'POST',
+        headers: {'Content-type': 'application/json'},
+    })
+    .then(res => {
+        const option = document.createElement("option");
+        option.value = term
+        option.textContent = term
+        dropdown.append(option)
+        const resultDisplay = document.getElementById("search-result");
+        resultDisplay.textContent = (`List ${term} created!`);
+    })
+}
