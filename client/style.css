@@ -103,3 +103,18 @@ input[type="text"] {
     text-align: right;
     flex: 1;
 }
+
+/* Style the result area */
+#result-tag {
+    font-size: 1.5rem;
+    margin: 1rem;
+}
+
+#search-result {
+    white-space: pre-wrap;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
