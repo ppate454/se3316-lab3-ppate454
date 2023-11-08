@@ -72,7 +72,7 @@ app.get('/api/search', (req, res) => {
 
     for (const supes of superInfo) {
         if (supes[field] && supes[field].toLowerCase().includes(pattern.toLowerCase())) {
-            matchingSuper.push(supes.id);
+            matchingSuper.push(supes);
             if (n && matchingSuper.length >= n) {
                 break;
             }
@@ -109,51 +109,50 @@ app.route('/api/list/:list')
         }
     });
 
-app.route('/api/listID/:list/:id')
-    .post((req, res) => {
-        console.log(`POST request for ${req.url}`);
-        const list = req.params.list;
-        const ids = req.params.id.split(',');
+app.post('/api/listID/:list/:id', (req, res) => {
+    console.log(`POST request for ${req.url}`);
+    const list = req.params.list;
+    const ids = req.params.id.split(',');
 
-        if (store.get(list) == null || store.get(list) == undefined) {
-            res.status(404).send(`List ${list} was not found`);
-            return;
-        }
+    if (store.get(list) == null || store.get(list) == undefined) {
+        res.status(404).send(`List ${list} was not found`);
+    }
 
-        for (id of ids) {
-            const heroes = superInfo.find(s => s.id === parseInt(id));
-            if (heroes) {
-                const pname = superPowers.find(s => s.hero_names === heroes.name);
-                if (pname) {
-                    const name = heroes.name;
-                    const superObject = superPowers.find(s => s.hero_names === name);
-                    let powers = [];
-
-                    for (const check in superObject) {
-                        if (superObject[check] === 'True') {
-                            powers.push(check);
-                        }
+    for (id of ids) {
+        const heroes = superInfo.find(s => s.id === parseInt(id)); //all json w id info
+        if (heroes) {
+            const pname = superPowers.find(s => s.hero_names === heroes.name);  // all name of json in name 
+            if (pname) {
+                //get all powers for specific name
+                const name = heroes.name;
+                const superObject = superPowers.find(s => s.hero_names === name);
+                let powers = [];
+                
+                for (const check in superObject) {
+                    if (superObject[check] === 'True') {
+                        powers.push(check);
                     }
-                    store.put(`${list}.${id}`, heroes);
-                    store.put(`${list}.${id}.Power`, powers);
                 }
-            } else {
-                res.status(404).send(`Heroes was not found`);
-                return;
+                store.put(`${list}.${id}`, heroes);
+                store.put(`${list}.${id}.Power`, powers);
             }
-        }
-        res.send(req.body);
-    })
-    .get((req, res) => {
-        const list = req.params.list;
-        const heroes = store.get(list);
-        if (heroes == null || heroes == undefined) {
-            res.status(404).send(`List ${list} was not found`);
         } else {
-            const heroesID = Object.keys(heroes).map(key => parseInt(key, 10));
-            res.send(heroesID);
+            res.status(404).send(`Heroes was not found`);
         }
-    });
+    }
+    res.send(req.body)
+});
+
+app.get('/api/listID/:list', (req, res) => {
+    const list = req.params.list;
+    const heroes = store.get(list);
+    if (heroes == null || heroes == undefined) {
+        res.status(404).send(`List ${list} was not found`);
+    } else {
+        const heroesID = Object.keys(heroes).map(key => parseInt(key, 10));
+        res.send(heroesID)
+    }
+});
 
 app.listen(port, () => {
     console.log(`Listening on port ${port}`);
