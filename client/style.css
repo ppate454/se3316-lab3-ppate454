@@ -104,14 +104,12 @@ input[type="text"] {
     flex: 1;
 }
 
-/* Style the result area */
 #result-tag {
     font-size: 1.5rem;
     margin: 1rem;
 }
 
 #search-result {
-    white-space: pre-wrap;
     background-color: #f9f9f9;
     border: 1px solid #ccc;
     border-radius: 5px;
