@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>SE3316 Lab 3</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -24,9 +24,8 @@
 
         <input type="search" placeholder="Search by power..." id="search-power">
         <button type="submit" onclick="searchPower()">Search</button>
-
-        <input type="search" placeholder="Amount of search results..." id="number">
     </div>
+    <input type="search" placeholder="#" id="number" class="amount">
     <div class = sort>
         <h2>Sort Functions</h2>
         <button type="submit" onclick ="sortName()">Sort by Name</button>
@@ -36,20 +35,20 @@
     </div>
     <div class = list>
         <h2>List Functions</h2>
-        <div>
+        <div class = "create">
             <label for="create_list">Create a List:</label>
             <div>
                 <input type="text" placeholder="Enter list name..." id="create-list">
                 <button type="submit" onclick="createList()">Create</button>
             </div>
         </div>
-        <div>
+        <div class = "select">
             <label for="select_list">Select a List:</label>
             <select name="lists" id="list-drop">
                 <option value="">Select an option</option>
             </select>
         </div>
-        <div>
+        <div class = "manage">
             <label for="manage_list">Manage List Selected:</label>
             <div>
                 <button type="submit" onclick="displayList()">Display List</button>
