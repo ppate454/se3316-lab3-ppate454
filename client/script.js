@@ -1,19 +1,39 @@
+function sanitizeInput(input) {
+    // Replace HTML and JavaScript special characters with their HTML entities
+    return input
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39");
+}
+
 function searchName() {
-    const input = document.getElementById('search-name')
-    const term = input.value;
-    const vals = document.getElementById('number')
-    const amount = vals.value
-    fetch(`/api/search?field=name&pattern=${term}&n=${amount}`) 
-    .then(res => res.json()
-    .then(data => {
-        const resultDisplay = document.getElementById("search-result");
-        resultDisplay.textContent = JSON.stringify(data, null, 2);
-    }))
+    const input = document.getElementById('search-name');
+    const term = sanitizeInput(input.value);
+    const vals = document.getElementById('number');
+    const amount = vals.value;
+    if (!term || isNaN(amount)) {
+        displayErrorMessage("Please enter valid values.");
+        return;
+    }
+
+    fetch(`/api/search?field=name&pattern=${term}&n=${amount}`)
+        .then(res => res.json())
+        .then(data => {
+            const resultDisplay = document.getElementById("search-result");
+            resultDisplay.textContent = JSON.stringify(data, null, 2);
+        });
 }
 
 function searchPower() {
-    const input = document.getElementById('search-power')
-    const term = input.value
+    const input = document.getElementById('search-power');
+    const term = sanitizeInput(input.value);
+    if (!term) {
+        displayErrorMessage("Please enter a valid superpower.");
+        return;
+    }
+
     fetch("/api/superPower")
         .then(res => res.json())
         .then(data => {
@@ -36,33 +56,49 @@ function searchPower() {
         })
         .catch(error => {
             console.error('Error:', error);
+            displayErrorMessage("An error occurred while fetching data.");
         });
 }
 
 function searchRace() {
-    const input = document.getElementById('search-race')
-    const term = input.value;
-    const vals = document.getElementById('number')
-    const amount = vals.value
-    fetch(`/api/search?field=Race&pattern=${term}&n=${amount}`) 
-    .then(res => res.json()
-    .then(data => {
-        const resultDisplay = document.getElementById("search-result");
-        resultDisplay.textContent = JSON.stringify(data, null, 2);
-    }))
+    const input = document.getElementById('search-race');
+    const term = sanitizeInput(input.value);
+    const vals = document.getElementById('number');
+    const amount = vals.value;
+    if (!term || isNaN(amount)) {
+        displayErrorMessage("Please enter valid values.");
+        return;
+    }
+
+    fetch(`/api/search?field=Race&pattern=${term}&n=${amount}`)
+        .then(res => res.json())
+        .then(data => {
+            const resultDisplay = document.getElementById("search-result");
+            resultDisplay.textContent = JSON.stringify(data, null, 2);
+        });
 }
 
 function searchPublisher() {
-    const input = document.getElementById('search-publisher')
-    const term = input.value;
-    const vals = document.getElementById('number')
-    const amount = vals.value
-    fetch(`/api/search?field=Publisher&pattern=${term}&n=${amount}`) 
-    .then(res => res.json()
-    .then(data => {
-        const resultDisplay = document.getElementById("search-result");
-        resultDisplay.textContent = JSON.stringify(data, null, 2);
-    }))
+    const input = document.getElementById('search-publisher');
+    const term = sanitizeInput(input.value);
+    const vals = document.getElementById('number');
+    const amount = vals.value;
+    if (!term || isNaN(amount)) {
+        displayErrorMessage("Please enter valid values.");
+        return;
+    }
+
+    fetch(`/api/search?field=Publisher&pattern=${term}&n=${amount}`)
+        .then(res => res.json())
+        .then(data => {
+            const resultDisplay = document.getElementById("search-result");
+            resultDisplay.textContent = JSON.stringify(data, null, 2);
+        });
+}
+
+function displayErrorMessage(message) {
+    const resultDisplay = document.getElementById("search-result");
+    resultDisplay.textContent = message;
 }
 
 function sortName() {
