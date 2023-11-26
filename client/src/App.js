@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from "react";
 import './App.css';
 
-const u = "http://localhost:8000"
-
 function App() {
 
-  const [message, setMessage] = useState("")
+  const [data, setData] = useState(null);
+
   useEffect(() => {
-    fetch(u + "/api/superPublisher")
+    fetch("api/superPublisher")
       .then((res) => res.json())
-      .then((data) => setMessage(data.json))
-  })
+      .then((data) => setData(data));
+  }, []);
 
   return (
     <div className="App">
-      <p>{message}</p>
+      <header className="App-header">
+        <p>{data}</p>
+        <p>Hello</p>
+      </header>
     </div>
   );
 }

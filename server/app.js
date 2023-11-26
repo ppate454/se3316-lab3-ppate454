@@ -1,9 +1,8 @@
 const express = require('express');
-const cors = require('cors');
 
 const app = express();
 
-const port = 8000;
+const port = process.env.PORT || 3001;
 const router = express.Router();
 
 const superInfo = require('./superhero_info.json');
@@ -12,6 +11,8 @@ const superPowers = require('./superhero_powers.json');
 const Storage = require('node-storage');
 const store = new Storage('./server/db.json')
 
+app.use(express.json());
+
 /*app.use('/', express.static('client'))
 
 app.use((req, res, next) => {
@@ -19,10 +20,7 @@ app.use((req, res, next) => {
     next();
 });*/
 
-//router.use(express.json())
-
-app.use(cors());
-app.use(express.json());
+router.use(express.json())
 
 app.route('/api/superInfo/:id')
     .get((req, res) => {
