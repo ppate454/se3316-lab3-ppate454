@@ -7,11 +7,30 @@ const CreateAccount = () => {
   const [nickname, setNickname] = useState('');
   const history = useHistory();
 
-  const handleCreateAccount = () => {
-    // Implement your account creation logic here
-    console.log('Creating account with values:', { email, password, nickname });
-    // Redirect to the login page after account creation
-    history.push('/login');
+  const handleCreateAccount = async () => {
+    try {
+      // Make a direct registration request to the Express backend using fetch
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, username: nickname }),
+      });
+
+      if (response.ok) {
+        console.log('Account created successfully');
+        // Redirect to the login page after successful account creation
+        history.push('/login');
+      } else {
+        const errorData = await response.json();
+        console.error('Account creation failed:', errorData.message);
+        // Handle account creation failure (show an error message, etc.)
+      }
+    } catch (error) {
+      console.error('Account creation failed:', error);
+      // Handle account creation failure (show an error message, etc.)
+    }
   };
 
   return (
@@ -23,7 +42,7 @@ const CreateAccount = () => {
       <label>Password:</label>
       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
       <br />
-      <label>Nickname:</label>
+      <label>Username:</label>
       <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} />
       <br />
       <button onClick={handleCreateAccount}>Create Account</button>

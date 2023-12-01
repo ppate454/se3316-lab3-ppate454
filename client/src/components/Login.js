@@ -6,11 +6,33 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const history = useHistory();
 
-  const handleLogin = () => {
-    // Implement your login logic here
-    console.log('Logging in with values:', { email, password });
-    // Redirect to a dashboard or home page after successful login
-    history.push('/dashboard');
+  const handleLogin = async () => {
+    try {
+      // Make a direct login request to the Express backend using fetch
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        // Assuming your backend sends a user object upon successful login
+        const { user } = await response.json();
+
+        console.log('Login successful:', user);
+
+        // Redirect to a dashboard or home page after successful login
+        history.push('/dashboard');
+      } else {
+        const errorData = await response.json();
+        // Handle login failure (show an error message, etc.)
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      // Handle login failure (show an error message, etc.)
+    }
   };
 
   return (

@@ -9,9 +9,14 @@ function App() {
   return (
     <Router>
       <div>
-        <Route path="/login" exact>
+        <Route path="/" exact>
           {/* You can place your default component or content here */}
           <h1>Welcome to My App</h1>
+          <nav>
+          <ul>
+            <li><Link to="/login">Start</Link></li>
+          </ul>
+        </nav>
         </Route>
 
         {/* Route for Login component */}
