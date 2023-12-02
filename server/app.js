@@ -14,7 +14,6 @@ const mongoose = require('mongoose')
 
 const passport = require('passport')
 const LocalStrategy = require('passport-local')
-const emailVerification = require('email-verification')(mongoose);
 const bcrypt = require('bcrypt');
 const validator = require('validator')
 const session = require('express-session');
@@ -48,11 +47,24 @@ const User = mongoose.model('User', {
     salt: { type: String, required: true },
     disabled: { type: Boolean, default: false },
     verified: { type: Boolean, default: false },
-    superHeroList: { type: Object }
+    list: {
+        type: [{
+            name: { type: String, unique: true },
+            description: { type: String },
+            heroCollection: { type: [Number], required: true },
+            visibility: { type: String, enum: ['public', 'private'], default: 'public' },
+            lastEditedTime: { type: Date, default: Date.now },
+            reviews: [{
+                rating: { type: Number },
+                comment: { type: String }
+            }]
+        }],
+        default: []
+    }
 })
 
 //make passport for authenticate
-passport.use(new LocalStrategy({ email: 'email' }, async function verify(email, password, cb) {
+passport.use(new LocalStrategy({ usernameField: 'email' }, async function verify(email, password, cb) {
     console.log(`${email} and ${password}`);
     try {
         // Find user by email in MongoDB
@@ -64,17 +76,20 @@ passport.use(new LocalStrategy({ email: 'email' }, async function verify(email, 
         if (user.disabled === true) {
             return cb(null, false, { message: 'Contact the site administrator' });
         }
+        if (!user.verified) {
+            console.log("unverified")
+            return cb(null, false, { message: 'Verify your email' });
+        }
 
         // Compare hashed password using bcrypt.compare
         const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (!passwordMatch) {
-            console.log('Hashed passwords do not match:');
-            console.log('Stored Password:', user.password);
-            console.log('Entered Password:', password);
+            console.log('Passwords do not match:');
             return cb(null, false, { message: 'Incorrect email or password.' });
         }
 
+        console.log("Authenticated")
         return cb(null, user, { message: 'Valid User' });
     } catch (error) {
         console.error(error);
@@ -86,10 +101,19 @@ passport.serializeUser((user, done) => {
     done(null, user._id.toString());
 });
 
-passport.deserializeUser((id, done) => {
-    User.findById(id, (err, user) => {
-        done(err, user);
-    });
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await User.findById(id);
+
+        if (!user) {
+            return done(null, false, { message: 'User not found.' });
+        }
+
+        return done(null, user);
+    } catch (error) {
+        console.error('Error finding user by ID:', error);
+        return done(error);
+    }
 });
 
 //make item for registering
@@ -118,13 +142,17 @@ app.post('/api/register', async (req, res) => {
         const newUser = new User({
             email,
             username,
-            password,
-            salt: hashedPassword,
+            password: hashedPassword,
+            salt,
         });
 
         // Save the user to the database
         await newUser.save();
-        return res.status(201).json({ message: 'User registered successfully' });
+
+        //make unique verification link
+        const verificationLink = `http://localhost:3001/api/verify/${email}/${username}`;
+
+        return res.status(201).json({ message: `User registered successfully. Use ${verificationLink} to verify account` });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Internal Server Error' });
@@ -132,26 +160,96 @@ app.post('/api/register', async (req, res) => {
 });
 
 //login check
-app.post('/api/login', passport.authenticate('local'), async (req, res) => {
+app.post('/api/login', async (req, res, next) => {
     try {
-        // Check if the user is verified
-        const existingUser = await User.findOne({ email });
-        if (!existingUser.verified) {
-            return res.status(403).json({ message: 'User not verified. Please verify your email.' });
+        passport.authenticate('local', async (err, user, info) => {
+            if (err) {
+                console.error('Authentication error:', err);
+                return res.status(500).json({ message: 'Internal Server Error' });
+            }
+
+            if (!user) {
+                // Custom handling of unsuccessful authentication
+                return res.status(401).json({ message: info.message || 'Authentication failed' });
+            }
+
+            // Manually log in the user
+            req.logIn(user, (loginErr) => {
+                if (loginErr) {
+                    console.error('Login error:', loginErr);
+                    return res.status(500).json({ message: 'Internal Server Error' });
+                }
+
+                // If verification is successful, respond with a success message and user details
+                return res.status(200).json({ message: 'Login successful', user });
+            });
+        })(req, res, next);
+    } catch (error) {
+        console.error('Error during authentication:', error);
+
+        // Extract the error message from Passport info object
+        const errorMessage = error && error.info ? error.info.message : 'Authentication failed';
+
+        return res.status(401).json({ message: errorMessage });
+    }
+});
+
+//email validator and if works change verified 
+app.get('/api/verify/:email/:userId', async (req, res) => {
+    const { email, username } = req.params;
+
+    try {
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid verification link.' });
         }
 
-        // If verification is successful, respond with a success message and user details
-        res.status(200).json({ message: 'Login successful', email});
+        user.verified = true;
+        await user.save();
+
+        res.json({ message: 'Email address verified successfully.' });
     } catch (error) {
-        console.error('Login failed:', error);
-        // Handle login failure (show an error message, etc.)
+        console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 
+//api/searchHero?vals&vals
+app.get('/api/searchHero', (req, res) => {
+    console.log(`GET request for ${req.url}`);
+    const { name, race, power, publisher } = req.query;
+    const matchingSuper = [];
 
+    for (const supes of superInfo) {
+        const isNameMatch = !name || supes.name.toLowerCase().startsWith(name.toLowerCase());
+        const isRaceMatch = !race || supes.race.toLowerCase().startsWith(race.toLowerCase());
+        const isPowerMatch = !power || hasMatchingPower(supes, power);
+        const isPublisherMatch = !publisher || supes.Publisher.toLowerCase().startsWith(publisher.toLowerCase());
 
-//email validator and if works change verified to true
+        if (isNameMatch && isRaceMatch && isPowerMatch && isPublisherMatch) {
+            matchingSuper.push({
+                id: supes.id,
+                name: supes.name,
+                publisher: supes.Publisher,
+            });
+        }
+    }
+
+    res.send(matchingSuper);
+});
+
+function hasMatchingPower(hero, power) {
+    const superObject = superPowers.find(s => s.hero_names === hero.name);
+    if (superObject) {
+        for (const check in superObject) {
+            if (check !== 'hero_names' && superObject[check] === 'True' && check.toLowerCase().startsWith(power.toLowerCase())) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 /*app.use('/', express.static('client'))
 
