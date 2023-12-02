@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, Link } from 'react-router-dom';
 
 const CreateAccount = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
+  const [info, setInfo] = useState('')
   const history = useHistory();
 
   const handleCreateAccount = async () => {
@@ -19,16 +20,19 @@ const CreateAccount = () => {
       });
 
       if (response.ok) {
+        const responseData = await response.json();
+        setInfo(responseData.message)
         console.log('Account created successfully');
         // Redirect to the login page after successful account creation
-        history.push('/login');
       } else {
-        const errorData = await response.json();
-        console.error('Account creation failed:', errorData.message);
+        const responseData = await response.json();
+        setInfo(responseData.message)
+        console.error({info});
         // Handle account creation failure (show an error message, etc.)
       }
     } catch (error) {
       console.error('Account creation failed:', error);
+      setInfo('Account creation failed. Please try again.');
       // Handle account creation failure (show an error message, etc.)
     }
   };
@@ -46,6 +50,12 @@ const CreateAccount = () => {
       <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} />
       <br />
       <button onClick={handleCreateAccount}>Create Account</button>
+      <p>{info}</p>
+      <nav>
+        <ul>
+          <li><Link to="/login">Log In</Link></li>
+        </ul>
+      </nav>
     </div>
   );
 };

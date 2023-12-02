@@ -4,6 +4,7 @@ import { useHistory, Link } from 'react-router-dom';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [info, setInfo] = useState('')
   const history = useHistory();
 
   const handleLogin = async () => {
@@ -26,11 +27,13 @@ const Login = () => {
         // Redirect to a dashboard or home page after successful login
         history.push('/dashboard');
       } else {
-        const errorData = await response.json();
+        const responseData = await response.json();
+        setInfo(responseData.message)
         // Handle login failure (show an error message, etc.)
       }
     } catch (error) {
       console.error('Login failed:', error);
+      setInfo('Account login failed. Please try again.');
       // Handle login failure (show an error message, etc.)
     }
   };
@@ -46,6 +49,7 @@ const Login = () => {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         <br />
         <button onClick={handleLogin}>Login</button>
+        <p>{info}</p>
       </div>
       <div>
         <nav>

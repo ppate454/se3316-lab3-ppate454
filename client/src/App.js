@@ -1,8 +1,9 @@
 import './App.css';
-import React from 'react';
-import { BrowserRouter as Router, Route, Link} from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Route, Link, Redirect } from 'react-router-dom';
 import Login from './components/Login';
 import CreateAccount from './components/Register';
+import Dashboard from './components/Dashboard';
 import UpdatePassword from './components/UpdatePassword';
 
 function App() {
@@ -13,17 +14,19 @@ function App() {
           {/* You can place your default component or content here */}
           <h1>Welcome to My App</h1>
           <nav>
-          <ul>
-            <li><Link to="/login">Start</Link></li>
-          </ul>
-        </nav>
+            <ul>
+              <li><Link to="/login">Start</Link></li>
+            </ul>
+          </nav>
         </Route>
 
         {/* Route for Login component */}
         <Route path="/login" component={Login} />
-
+        
         {/* Route for CreateAccount component */}
         <Route path="/create-account" component={CreateAccount} />
+
+        <Route path="/dashboard" component={Dashboard} />
 
         {/* Default route, you can set it to a component or a 404 page */}
       </div>
