@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useHistory, Link } from 'react-router-dom';
+import { useUser } from '../UserContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [info, setInfo] = useState('')
+  const { loginUser } = useUser();
   const history = useHistory();
 
   const handleLogin = async () => {
@@ -23,7 +25,7 @@ const Login = () => {
         const { user } = await response.json();
 
         console.log('Login successful:', user);
-
+        loginUser(email);
         // Redirect to a dashboard or home page after successful login
         history.push('/dashboard');
       } else {
