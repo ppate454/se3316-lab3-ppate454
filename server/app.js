@@ -98,6 +98,7 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, async function verify
     }
 }));
 
+
 passport.serializeUser((user, done) => {
     done(null, user._id.toString());
 });
@@ -295,6 +296,10 @@ app.get('/api/searchHero/:id', (req, res) => {
             weight: superhero.Weight,
         };
 
+        const ddgSearchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(superhero.name)}`;
+        const ddgButton = `<a href="${ddgSearchUrl}" target="_blank">Search on DDG</a>`;
+        heroDetails.ddgButton = ddgButton;
+
         res.send(heroDetails);
     } else {
         res.status(404).send(`Hero with ID ${id} was not found`);
@@ -376,6 +381,39 @@ app.put('/api/editList/:email/:listName', async (req, res) => {
     }
 });
 
+app.delete('/api/deleteList/:email/:listName', async (req, res) => {
+    try {
+        const { email, listName } = req.params;
+
+        // Find the user by email
+        const user = await User.findOne({ email });
+
+        // Check if the user exists
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Find the index of the list with the specified listName
+        const listIndex = user.list.findIndex(list => list.name === listName);
+
+        // Check if the list exists
+        if (listIndex === -1) {
+            return res.status(404).json({ message: 'List not found' });
+        }
+
+        // Remove the list at the specified index
+        user.list.splice(listIndex, 1);
+
+        // Save the updated user object
+        await user.save();
+
+        res.status(200).json({ message: 'List deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
 //get 10 most recent lists to display
 app.get('/api/publicHeroLists', async (req, res) => {
     try {
@@ -401,6 +439,46 @@ app.get('/api/publicHeroLists', async (req, res) => {
         }).flat();
 
         res.status(200).json(formattedLists);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.post('/api/addReview/:email/:listName', async (req, res) => {
+    try {
+        const { email, listName } = req.params;
+        const { rating, comment } = req.body;
+
+        // Find the user by email
+        const user = await User.findOne({ email });
+
+        // Check if the user exists
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Find the list by name
+        const listIndex = user.list.findIndex(list => list.name === listName && list.visibility === 'public');
+
+        // Check if the list exists
+        if (listIndex === -1) {
+            return res.status(404).json({ message: 'List not found or not public' });
+        }
+
+        // Create a new review
+        const newReview = {
+            rating: rating,
+            comment: comment || '', // Set default value or leave it empty
+        };
+
+        // Add the review to the list
+        user.list[listIndex].reviews.push(newReview);
+
+        // Save the updated user object
+        await user.save();
+
+        res.status(201).json({ message: 'Review added successfully', review: newReview });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
