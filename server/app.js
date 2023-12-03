@@ -49,14 +49,14 @@ const User = mongoose.model('User', {
     verified: { type: Boolean, default: false },
     list: {
         type: [{
-            name: { type: String, unique: true },
+            name: { type: String, unique: true, required: true },
             description: { type: String },
             heroCollection: { type: [Number], required: true },
             visibility: { type: String, enum: ['public', 'private'], default: 'public' },
             lastEditedTime: { type: Date, default: Date.now },
             reviews: [{
-                rating: { type: Number },
-                comment: { type: String }
+                rating: { type: [Number], required: true },
+                comment: { type: [String] }
             }]
         }],
         default: []
@@ -78,7 +78,8 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, async function verify
         }
         if (!user.verified) {
             console.log("unverified")
-            return cb(null, false, { message: 'Verify your email' });
+            const verificationLink = `http://localhost:3001/api/verify/${email}/${user._id}`;
+            return cb(null, false, { message: `Verify your email ${verificationLink}` });
         }
 
         // Compare hashed password using bcrypt.compare
@@ -150,7 +151,7 @@ app.post('/api/register', async (req, res) => {
         await newUser.save();
 
         //make unique verification link
-        const verificationLink = `http://localhost:3001/api/verify/${email}/${username}`;
+        const verificationLink = `http://localhost:3001/api/verify/${email}/${newUser._id}`;
 
         return res.status(201).json({ message: `User registered successfully. Use ${verificationLink} to verify account` });
     } catch (error) {
@@ -194,17 +195,26 @@ app.post('/api/login', async (req, res, next) => {
     }
 });
 
+app.get('/api/logout', (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            console.error('Error during logout:', err);
+            return res.status(500).json({ success: false, message: 'Error during logout.' });
+        }
+        res.json({ success: true, message: 'Logged out successfully.' });
+    });
+})
+
 //email validator and if works change verified 
 app.get('/api/verify/:email/:userId', async (req, res) => {
-    const { email, username } = req.params;
+    const { email, userId } = req.params;
 
     try {
         const user = await User.findOne({ email });
 
-        if (!user) {
+        if (!user || user._id != userId) {
             return res.status(400).json({ message: 'Invalid verification link.' });
         }
-
         user.verified = true;
         await user.save();
 
@@ -214,6 +224,8 @@ app.get('/api/verify/:email/:userId', async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+const stringSimilarity = require('string-similarity');
 
 //api/searchHero?vals&vals
 app.get('/api/searchHero', (req, res) => {
@@ -250,6 +262,150 @@ function hasMatchingPower(hero, power) {
     }
     return false;
 }
+
+//additional info on each hero by id
+app.get('/api/searchHero/:id', (req, res) => {
+    console.log(`GET request for ${req.url}`);
+    const id = req.params.id;
+    const superhero = superInfo.find(s => s.id === parseInt(id));
+
+    if (superhero) {
+        const name = superhero.name;
+        const superObject = superPowers.find(s => s.hero_names === name);
+        let powers = [];
+
+        for (const check in superObject) {
+            if (superObject[check] === 'True') {
+                powers.push(check);
+            }
+        }
+
+        const heroDetails = {
+            id: superhero.id,
+            name: superhero.name,
+            powers: powers,
+            publisher: superhero.Publisher,
+            gender: superhero.Gender,
+            eyeColor: superhero["Eye color"],
+            race: superhero.race,
+            hairColor: superhero["Hair color"],
+            height: superhero.Height,
+            skinColor: superhero["Skin color"],
+            alignment: superhero.Alignment,
+            weight: superhero.Weight,
+        };
+
+        res.send(heroDetails);
+    } else {
+        res.status(404).send(`Hero with ID ${id} was not found`);
+    }
+});
+
+//creating list for user 
+app.post('/api/createList', async (req, res) => {
+    try {
+        const { email, name, description, heroCollection, visibility } = req.body;
+
+        // Check if the list name already exists for any user
+        const listExists = await User.exists({ 'list.name': name });
+        if (listExists) {
+            return res.status(409).json({ message: 'List name already exists' });
+        }
+
+        // Find the user by email
+        let user = await User.findOne({ email });
+
+        // If the user does not exist, create a new user
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const newList = {
+            name,
+            description: description || '',
+            heroCollection: heroCollection ? heroCollection.map(Number) : [],
+            visibility: visibility || 'private',
+            lastEditedTime: new Date(),
+        };
+
+        user.list.push(newList);
+        await user.save();
+
+        res.status(201).json({ message: 'List created successfully', list: newList });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+//editing list based on correct email primary key and unique list name
+app.put('/api/editList/:email/:listName', async (req, res) => {
+    try {
+        const { email, listName } = req.params;
+        const { description, heroCollection, visibility } = req.body;
+
+        // Find the user by email
+        let user = await User.findOne({ email });
+
+        // If the user does not exist, return a 404 error
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Find the list within the user's lists
+        const listIndex = user.list.findIndex((list) => list.name === listName);
+
+        // If the list does not exist, return a 404 error
+        if (listIndex === -1) {
+            return res.status(404).json({ message: 'List not found' });
+        }
+
+        // Update the list details
+        user.list[listIndex].description = description || '';
+        user.list[listIndex].heroCollection = heroCollection ? heroCollection.map(Number) : [];
+        user.list[listIndex].visibility = visibility || 'private';
+        user.list[listIndex].lastEditedTime = new Date();
+
+        // Save the updated user
+        await user.save();
+
+        res.status(200).json({ message: 'List edited successfully', list: user.list[listIndex] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+//get 10 most recent lists to display
+app.get('/api/publicHeroLists', async (req, res) => {
+    try {
+        const publicUsers = await User.find(
+            { 'list.visibility': 'public' },
+            { username: 1, list: 1 }
+        )
+            .sort({ 'list.lastEditedTime': -1 })
+            .limit(10);
+
+        console.log('Public Users:', publicUsers);
+
+        // Format the response as needed
+        const formattedLists = publicUsers.map(user => {
+            const userLists = user.list.filter(list => list.visibility === 'public');
+            return userLists.map(listDetails => ({
+                name: listDetails.name,
+                creatorName: user.username,
+                lastEditedTime: listDetails.lastEditedTime,
+                numberOfHeroes: listDetails.heroCollection.length,
+                averageRating: listDetails.reviews.length > 0 ? calculateAverageRating(listDetails.reviews) : 'No reviews',
+            }));
+        }).flat();
+
+        res.status(200).json(formattedLists);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
 
 /*app.use('/', express.static('client'))
 
