@@ -348,6 +348,15 @@ app.post('/api/createList', async (req, res) => {
     try {
         const { email, name, description, heroCollection, visibility } = req.body;
 
+        // Check if heroCollection has values and name length is > 0
+        if (!heroCollection || heroCollection.length === 0) {
+            return res.status(400).json({ message: 'heroCollection cannot be empty' });
+        }
+
+        if (!name || name.trim().length === 0) {
+            return res.status(400).json({ message: 'List name cannot be empty' });
+        }
+
         // Check if the list name already exists for any user
         const listExists = await User.exists({ 'list.name': name });
         if (listExists) {
@@ -363,9 +372,9 @@ app.post('/api/createList', async (req, res) => {
         }
 
         const newList = {
-            name,
+            name: name.trim(),
             description: description || '',
-            heroCollection: heroCollection ? heroCollection.map(Number) : [],
+            heroCollection: heroCollection.map(Number),
             visibility: visibility || 'private',
             lastEditedTime: new Date(),
         };
@@ -501,6 +510,27 @@ const calculateAverageRating = (reviews) => {
     // Round to 2 decimal places
     return Math.round(averageRating * 100) / 100;
 };
+
+// Assuming you are using Express.js
+app.get('/api/getList/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        // Find the user by email
+        const user = await User.findOne({ email });
+
+        // If the user does not exist, return a 404 error
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Return the user's lists
+        res.status(200).json({ lists: user.list });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
 
 app.post('/api/addReview/:listName', async (req, res) => {
     try {

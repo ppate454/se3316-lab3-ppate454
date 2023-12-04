@@ -113,6 +113,15 @@ function Dashboard() {
 
   const createList = async () => {
     try {
+
+      const trimmedHeroCollection = newHeroCollection.trim();
+
+      // Check if heroCollection is empty or contains only spaces
+      if (trimmedHeroCollection === '') {
+        console.error('heroCollection cannot be empty');
+        setInfo('heroCollection cannot be empty');
+        return;
+      }
       const response = await fetch('/api/createList', {
         method: 'POST',
         headers: {
@@ -390,7 +399,6 @@ function Dashboard() {
               placeholder="Comma-separated hero IDs"
               value={newHeroCollection}
               onChange={(e) => setNewHeroCollection(e.target.value)}
-              required
             />
 
             <label htmlFor="visibility">Visibility:</label>
