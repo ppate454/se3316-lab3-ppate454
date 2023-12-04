@@ -466,26 +466,30 @@ app.get('/api/publicHeroLists', async (req, res) => {
         const publicUsers = await User.find(
             { 'list.visibility': 'public' },
             { username: 1, list: 1 }
-        )
-            .sort({ 'list.lastEditedTime': -1 })
-            .limit(10);
-
-        console.log('Public Users:', publicUsers);
+        );
 
         // Format the response as needed
-        const formattedLists = publicUsers.map(user => {
-            const userLists = user.list.filter(list => list.visibility === 'public');
-            return userLists.map(listDetails => ({
-                name: listDetails.name,
-                creatorName: user.username,
-                lastEditedTime: listDetails.lastEditedTime,
-                heros: listDetails.heroCollection,
-                numberOfHeroes: listDetails.heroCollection.length,
-                averageRating: listDetails.reviews.length > 0 ? calculateAverageRating(listDetails.reviews) : 'No reviews',
-            }));
-        }).flat();
+        const formattedLists = publicUsers
+            .map(user => {
+                const userLists = user.list.filter(list => list.visibility === 'public');
+                return userLists.map(listDetails => ({
+                    name: listDetails.name,
+                    creatorName: user.username,
+                    lastEditedTime: listDetails.lastEditedTime, // Make sure lastEditedTime is a Date object
+                    heros: listDetails.heroCollection,
+                    numberOfHeroes: listDetails.heroCollection.length,
+                    averageRating: listDetails.reviews.length > 0 ? calculateAverageRating(listDetails.reviews) : 'No reviews',
+                }));
+            })
+            .flat();
 
-        res.status(200).json(formattedLists);
+        // Sort the lists by lastEditedTime in descending order
+        formattedLists.sort((a, b) => b.lastEditedTime - a.lastEditedTime);
+
+        // Take the top 10 lists
+        const recentLists = formattedLists.slice(0, 10);
+
+        res.status(200).json(recentLists);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });

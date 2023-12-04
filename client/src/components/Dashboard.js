@@ -50,6 +50,7 @@ function Dashboard() {
         // Optionally, you can reset the form field or perform other actions
         setDeleteListName('');
         fetchUserLists()
+        fetchPublicHeroLists()
       } else {
         const errorData = await response.json();
         setDeleteInfo(`Error deleting list: ${errorData.message}`);
@@ -96,6 +97,7 @@ function Dashboard() {
 
       if (response.ok) {
         const data = await response.json();
+        fetchPublicHeroLists()
         setEditInfo(data.message);
         setEditListName('');
         setEditListDescription('');
@@ -139,6 +141,7 @@ function Dashboard() {
       if (response.ok) {
         const data = await response.json();
         console.log(data);
+        fetchPublicHeroLists()
         setInfo(data.message)
         setNewListName('');
         setNewListDescription('');
@@ -293,7 +296,7 @@ function Dashboard() {
               <li key={hero.id}>
                 <div>
                   <strong>{hero.name}</strong> - {hero.publisher}{' '}
-                  <button onClick={() => handleViewDetails(hero.id)}>View Details</button>
+                  <button className='h'onClick={() => handleViewDetails(hero.id)}>View Details</button>
                 </div>
                 {selectedHero && selectedHero.id === hero.id && (
                   <div className="hero-details">
@@ -332,11 +335,12 @@ function Dashboard() {
                 <p>Number of Heroes: {list.numberOfHeroes}</p>
 
                 {selectedList === list.name && publicHeroes.map((heroId) => (<div>
-                  <h4>ID: {heroId}</h4>
-                  <button onClick={() => handleViewDetails2(heroId)}>View Details</button>
+                  <div>
+                    <strong>ID: {heroId}</strong>
+                    <button onClick={() => handleViewDetails2(heroId)}>View Details</button>
+                  </div>
                   {selectedHero2 && selectedHero2.id === heroId && (
                     <div className="hero-details">
-                      <p>ID: {selectedHero2.id}</p>
                       <p>Name: {selectedHero2.name}</p>
                       <p>Powers: {selectedHero2.powers.join(', ')}</p>
                       <p>Publisher: {selectedHero2.publisher}</p>
