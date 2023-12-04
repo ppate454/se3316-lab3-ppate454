@@ -206,6 +206,44 @@ app.get('/api/logout', (req, res) => {
     });
 })
 
+app.put('/api/update-password', async (req, res) => {
+    try {
+        const { email, currentPassword, newPassword } = req.body;
+
+        // Implement your password update logic here
+        // Verify the user's current password, and update it with the new one
+
+        // Example: Find the user by email
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Verify the current password
+        const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+
+        // Hash the new password
+        const saltRounds = 10;
+        const salt = await bcrypt.genSalt(saltRounds);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update the user's password in the database
+        user.password = hashedPassword;
+        console.log("updated password")
+        await user.save();
+
+        return res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
 //email validator and if works change verified 
 app.get('/api/verify/:email/:userId', async (req, res) => {
     const { email, userId } = req.params;
@@ -374,26 +412,6 @@ app.put('/api/editList/:email/:listName', async (req, res) => {
         await user.save();
 
         res.status(200).json({ message: 'List edited successfully', list: user.list[listIndex] });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-});
-
-app.get('/api/getList/:email', async (req, res) => {
-    try {
-        const { email } = req.params;
-
-        // Find the user by email
-        const user = await User.findOne({ email });
-
-        // If the user does not exist, return a 404 error
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Return the user's lists
-        res.status(200).json({ lists: user.list });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });

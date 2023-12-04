@@ -54,9 +54,10 @@ const Login = () => {
         <p>{info}</p>
       </div>
       <div>
-        <nav>
-          <Link to="/create-account">Create Account</Link>
-        </nav>
+        <ul>
+          <li><Link to="/create-account">Create Account</Link></li>
+          <li><Link to="/update-password">Update Password</Link></li>
+        </ul>
       </div>
     </div>
   );
