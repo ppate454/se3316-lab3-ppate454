@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useUser } from '../UserContext';
 import "./Dashboard.css"
@@ -21,6 +21,128 @@ function Dashboard() {
   const [publicHeroes, setPublicHeroes] = useState([])
   const [selectedList, setSelectedList] = useState(null);
 
+  const [newListName, setNewListName] = useState('');
+  const [newListDescription, setNewListDescription] = useState('');
+  const [newHeroCollection, setNewHeroCollection] = useState('');
+  const [newVisibility, setNewVisibility] = useState('private');
+  const [info, setInfo] = useState('')
+
+  const [editListName, setEditListName] = useState('');
+  const [editListDescription, setEditListDescription] = useState('');
+  const [editHeroCollection, setEditHeroCollection] = useState('');
+  const [editVisibility, setEditVisibility] = useState('private');
+  const [editInfo, setEditInfo] = useState('');
+  const [userLists, setUserLists] = useState([]); // State to store the user's lists
+
+  const [deleteListName, setDeleteListName] = useState('');
+  const [deleteInfo, setDeleteInfo] = useState('');
+  const [userDeleteLists, setUserDeleteLists] = useState([]); // State to store the user's lists
+
+
+  const deleteList = async () => {
+    try {
+      const response = await fetch(`/api/deleteList/${user}/${deleteListName}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setDeleteInfo(`List deleted successfully`);
+        // Optionally, you can reset the form field or perform other actions
+        setDeleteListName('');
+        fetchUserLists()
+      } else {
+        const errorData = await response.json();
+        setDeleteInfo(`Error deleting list: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete list', error);
+      setDeleteInfo('Error deleting list');
+    }
+  };
+
+  const fetchUserLists = async () => {
+    try {
+      const response = await fetch(`/api/getList/${user}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserLists(data.lists);
+        setUserDeleteLists(data.lists);
+      } else {
+        console.error('Failed to fetch user lists');
+      }
+    } catch (error) {
+      console.error('Failed to fetch user lists', error);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch the user's lists when the component mounts
+    fetchUserLists();
+  }, [user]);
+
+  const editList = async () => {
+    try {
+      const response = await fetch(`/api/editList/${user}/${editListName}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: editListDescription,
+          heroCollection: editHeroCollection.split(',').map(id => Number(id.trim())),
+          visibility: editVisibility,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEditInfo(data.message);
+        setEditListName('');
+        setEditListDescription('');
+        setEditHeroCollection('');
+        setEditVisibility('private');
+      } else {
+        const errorData = await response.json();
+        setInfo(`Error editing list: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Failed to edit list', error);
+      setInfo('Error editing list');
+    }
+  };
+
+  const createList = async () => {
+    try {
+      const response = await fetch('/api/createList', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user,
+          name: newListName,
+          description: newListDescription,
+          heroCollection: newHeroCollection.split(',').map(id => Number(id.trim())),
+          visibility: newVisibility,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(data);
+        setInfo(data.message)
+        setNewListName('');
+        setNewListDescription('');
+        setNewHeroCollection('');
+        setNewVisibility('private');
+        fetchUserLists();
+      } else {
+        console.error('Failed to create list');
+      }
+    } catch (error) {
+      console.error('Failed to create list', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     setSearchParams({
@@ -200,34 +322,34 @@ function Dashboard() {
                 <p>Creator: {list.creatorName}</p>
                 <p>Number of Heroes: {list.numberOfHeroes}</p>
 
-                {selectedList === list.name && publicHeroes.map((heroId) => (                  <div>
-                    <h4>ID: {heroId}</h4>
-                    <button onClick={() => handleViewDetails2(heroId)}>View Details</button>
-                    {selectedHero2 && selectedHero2.id === heroId && (
-                      <div className="hero-details">
-                        <p>ID: {selectedHero2.id}</p>
-                        <p>Name: {selectedHero2.name}</p>
-                        <p>Powers: {selectedHero2.powers.join(', ')}</p>
-                        <p>Publisher: {selectedHero2.publisher}</p>
-                        <p>Gender: {selectedHero2.gender}</p>
-                        <p>Eye Color: {selectedHero2.eyeColor}</p>
-                        <p>Race: {selectedHero2.race}</p>
-                        <p>Hair Color: {selectedHero2.hairColor}</p>
-                        <p>Height: {selectedHero2.height}</p>
-                        <p>Skin Color: {selectedHero2.skinColor}</p>
-                        <p>Alignment: {selectedHero2.alignment}</p>
-                        <p>Weight: {selectedHero2.weight}</p>
-                        <button onClick={() => window.open(selectedHero2.ddgButton)}>
-                          Search on DDG
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                {selectedList === list.name && publicHeroes.map((heroId) => (<div>
+                  <h4>ID: {heroId}</h4>
+                  <button onClick={() => handleViewDetails2(heroId)}>View Details</button>
+                  {selectedHero2 && selectedHero2.id === heroId && (
+                    <div className="hero-details">
+                      <p>ID: {selectedHero2.id}</p>
+                      <p>Name: {selectedHero2.name}</p>
+                      <p>Powers: {selectedHero2.powers.join(', ')}</p>
+                      <p>Publisher: {selectedHero2.publisher}</p>
+                      <p>Gender: {selectedHero2.gender}</p>
+                      <p>Eye Color: {selectedHero2.eyeColor}</p>
+                      <p>Race: {selectedHero2.race}</p>
+                      <p>Hair Color: {selectedHero2.hairColor}</p>
+                      <p>Height: {selectedHero2.height}</p>
+                      <p>Skin Color: {selectedHero2.skinColor}</p>
+                      <p>Alignment: {selectedHero2.alignment}</p>
+                      <p>Weight: {selectedHero2.weight}</p>
+                      <button onClick={() => window.open(selectedHero2.ddgButton)}>
+                        Search on DDG
+                      </button>
+                    </div>
+                  )}
+                </div>
                 ))}
 
                 <p>Last Edited Time: {list.lastEditedTime}</p>
-                <p>Average Rating: {list.averageRating}</p>
-                <button onClick={() => {handleShowHeroes(list.heros); setSelectedList(list.name)}}>
+                <p>Average Rating: {list.averageRating}/5</p>
+                <button onClick={() => { handleShowHeroes(list.heros); setSelectedList(list.name) }}>
                   Show Heroes
                 </button>
               </div>
@@ -236,10 +358,143 @@ function Dashboard() {
         </ul>
       </div>
       <div>
+        <h2>Personal Hero Lists</h2>
+
+        <div>
+          <h4>Create a List:</h4>
+          <form id="createListForm">
+            <label htmlFor="listName">List Name:</label>
+            <input
+              type="text"
+              id="listName"
+              name="listName"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              required
+            />
+
+            <label htmlFor="listDescription">Description:</label>
+            <input
+              type="text"
+              id="listDescription"
+              name="listDescription"
+              value={newListDescription}
+              onChange={(e) => setNewListDescription(e.target.value)}
+            />
+
+            <label htmlFor="heroCollection">Hero Collection:</label>
+            <input
+              type="text"
+              id="heroCollection"
+              name="heroCollection"
+              placeholder="Comma-separated hero IDs"
+              value={newHeroCollection}
+              onChange={(e) => setNewHeroCollection(e.target.value)}
+              required
+            />
+
+            <label htmlFor="visibility">Visibility:</label>
+            <select
+              id="visibility"
+              name="visibility"
+              value={newVisibility}
+              onChange={(e) => setNewVisibility(e.target.value)}
+            >
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+
+            <button type="button" onClick={createList}>
+              Create List
+            </button>
+          </form>
+          <p>{info}</p>
+        </div>
+
+        <div>
+          <h4>Edit a List:</h4>
+          <form id="editListForm">
+            <label htmlFor="editListName">Select List to Edit:</label>
+            <select
+              id="editListName"
+              name="editListName"
+              value={editListName}
+              onChange={(e) => setEditListName(e.target.value)}
+              required
+            >
+              <option value="" disabled>Select a List</option>
+              {userLists.map((list) => (
+                <option key={list.name} value={list.name}>{list.name}</option>
+              ))}
+            </select>
+
+            <label htmlFor="editListDescription">Description:</label>
+            <input
+              type="text"
+              id="editListDescription"
+              name="editListDescription"
+              value={editListDescription}
+              onChange={(e) => setEditListDescription(e.target.value)}
+            />
+
+            <label htmlFor="editHeroCollection">Hero Collection:</label>
+            <input
+              type="text"
+              id="editHeroCollection"
+              name="editHeroCollection"
+              placeholder="Comma-separated hero IDs"
+              value={editHeroCollection}
+              onChange={(e) => setEditHeroCollection(e.target.value)}
+              required
+            />
+
+            <label htmlFor="editVisibility">Visibility:</label>
+            <select
+              id="editVisibility"
+              name="editVisibility"
+              value={editVisibility}
+              onChange={(e) => setEditVisibility(e.target.value)}
+            >
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+
+            <button type="button" onClick={editList}>
+              Edit List
+            </button>
+          </form>
+          <p>{editInfo}</p>
+        </div>
+
+        <div>
+          <h4>Delete a List:</h4>
+          <form id="deleteListForm">
+            <label htmlFor="deleteListName">Select List to Delete:</label>
+            <select
+              id="deleteListName"
+              name="deleteListName"
+              value={deleteListName}
+              onChange={(e) => setDeleteListName(e.target.value)}
+              required
+            >
+              <option value="" disabled>Select a List</option>
+              {userLists.map((list) => (
+                <option key={list.name} value={list.name}>{list.name}</option>
+              ))}
+            </select>
+
+            <button type="button" onClick={deleteList}>
+              Delete List
+            </button>
+          </form>
+          <p>{deleteInfo}</p>
+        </div>
+      </div>
+      <div>
         <button onClick={handleLogout}>Logout</button>
         <p>{user}</p>
       </div>
-    </div >
+    </div>
   );
 }
 

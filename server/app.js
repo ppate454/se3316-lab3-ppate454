@@ -331,7 +331,7 @@ app.post('/api/createList', async (req, res) => {
             visibility: visibility || 'private',
             lastEditedTime: new Date(),
         };
-
+        console.log("added list")
         user.list.push(newList);
         await user.save();
 
@@ -374,6 +374,26 @@ app.put('/api/editList/:email/:listName', async (req, res) => {
         await user.save();
 
         res.status(200).json({ message: 'List edited successfully', list: user.list[listIndex] });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.get('/api/getList/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        // Find the user by email
+        const user = await User.findOne({ email });
+
+        // If the user does not exist, return a 404 error
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Return the user's lists
+        res.status(200).json({ lists: user.list });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
@@ -445,26 +465,48 @@ app.get('/api/publicHeroLists', async (req, res) => {
     }
 });
 
-app.post('/api/addReview/:email/:listName', async (req, res) => {
+const calculateAverageRating = (reviews) => {
+    if (reviews.length === 0) {
+        return 0; // Default to 0 if there are no reviews
+    }
+
+    let sumOfRatings = 0;
+
+    // Use a for loop to calculate the sum of ratings
+    for (let i = 0; i < reviews.length; i++) {
+        sumOfRatings += reviews[i].rating[0]; // Assuming rating is an array with a single value
+    }
+
+    // Calculate the average rating
+    const averageRating = sumOfRatings / reviews.length;
+
+    // Round to 2 decimal places
+    return Math.round(averageRating * 100) / 100;
+};
+
+app.post('/api/addReview/:listName', async (req, res) => {
     try {
-        const { email, listName } = req.params;
+        const { listName } = req.params;
         const { rating, comment } = req.body;
 
-        // Find the user by email
-        const user = await User.findOne({ email });
+        // Check if rating is within the valid range (0-5)
+        if (rating < 0 || rating > 5) {
+            return res.status(400).json({ message: 'Invalid rating. Rating must be between 0 and 5.' });
+        }
+
+        // Find the user by checking if the list exists with the given name and visibility
+        const user = await User.findOne({
+            'list.name': listName,
+            'list.visibility': 'public'
+        });
 
         // Check if the user exists
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Find the list by name
-        const listIndex = user.list.findIndex(list => list.name === listName && list.visibility === 'public');
-
-        // Check if the list exists
-        if (listIndex === -1) {
             return res.status(404).json({ message: 'List not found or not public' });
         }
+
+        // Find the index of the list in the user's array
+        const listIndex = user.list.findIndex(list => list.name === listName && list.visibility === 'public');
 
         // Create a new review
         const newReview = {
