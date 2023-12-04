@@ -6,6 +6,7 @@ import "./Dashboard.css"
 function Dashboard() {
   const { user, logoutUser } = useUser();
   const history = useHistory();
+
   const [searchParams, setSearchParams] = useState({
     name: '',
     race: '',
@@ -14,6 +15,12 @@ function Dashboard() {
   });
   const [searchResults, setSearchResults] = useState([]);
   const [selectedHero, setSelectedHero] = useState(null);
+  const [selectedHero2, setSelectedHero2] = useState(null);
+
+  const [publicHeroLists, setPublicHeroLists] = useState([]);
+  const [publicHeroes, setPublicHeroes] = useState([])
+  const [selectedList, setSelectedList] = useState(null);
+
 
   const handleInputChange = (e) => {
     setSearchParams({
@@ -53,6 +60,38 @@ function Dashboard() {
     } catch (error) {
       console.error(`Failed to fetch details for hero with ID ${id}`, error);
     }
+  };
+
+  const handleViewDetails2 = async (id) => {
+    try {
+      const response = await fetch(`/api/searchHero/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedHero2(data);
+      } else {
+        console.error(`Failed to fetch details for hero with ID ${id}`);
+      }
+    } catch (error) {
+      console.error(`Failed to fetch details for hero with ID ${id}`, error);
+    }
+  };
+
+  const fetchPublicHeroLists = async () => {
+    try {
+      const response = await fetch('/api/publicHeroLists');
+      if (response.ok) {
+        const data = await response.json();
+        setPublicHeroLists(data);
+      } else {
+        console.error('Failed to fetch public hero lists');
+      }
+    } catch (error) {
+      console.error('Failed to fetch public hero lists', error);
+    }
+  };
+
+  const handleShowHeroes = (heros) => {
+    setPublicHeroes(heros)
   };
 
   const handleLogout = async () => {
@@ -118,7 +157,7 @@ function Dashboard() {
         </form>
         <div>
           <h3>Search Results</h3>
-          <ul>
+          <ul className="search-results-list">
             {searchResults.map((hero) => (
               <li key={hero.id}>
                 <div>
@@ -127,6 +166,7 @@ function Dashboard() {
                 </div>
                 {selectedHero && selectedHero.id === hero.id && (
                   <div className="hero-details">
+                    <h4>{selectedHero.name} Details:</h4>
                     <p>ID: {selectedHero.id}</p>
                     <p>Name: {selectedHero.name}</p>
                     <p>Powers: {selectedHero.powers.join(', ')}</p>
@@ -139,7 +179,7 @@ function Dashboard() {
                     <p>Skin Color: {selectedHero.skinColor}</p>
                     <p>Alignment: {selectedHero.alignment}</p>
                     <p>Weight: {selectedHero.weight}</p>
-                    <button onClick={() => window.open(selectedHero.ddgButton)}>
+                    <button onClick={() => window.open(selectedHero.ddgButton, '_blank')}>
                       Search on DDG
                     </button>
                   </div>
@@ -150,10 +190,56 @@ function Dashboard() {
         </div>
       </div>
       <div>
+        <h2>Public Hero Lists</h2>
+        <button onClick={fetchPublicHeroLists}>Show</button>
+        <ul>
+          {publicHeroLists.map((list) => (
+            <li key={list.name}>
+              <div>
+                <h3>{list.name}</h3>
+                <p>Creator: {list.creatorName}</p>
+                <p>Number of Heroes: {list.numberOfHeroes}</p>
+
+                {selectedList === list.name && publicHeroes.map((heroId) => (                  <div>
+                    <h4>ID: {heroId}</h4>
+                    <button onClick={() => handleViewDetails2(heroId)}>View Details</button>
+                    {selectedHero2 && selectedHero2.id === heroId && (
+                      <div className="hero-details">
+                        <p>ID: {selectedHero2.id}</p>
+                        <p>Name: {selectedHero2.name}</p>
+                        <p>Powers: {selectedHero2.powers.join(', ')}</p>
+                        <p>Publisher: {selectedHero2.publisher}</p>
+                        <p>Gender: {selectedHero2.gender}</p>
+                        <p>Eye Color: {selectedHero2.eyeColor}</p>
+                        <p>Race: {selectedHero2.race}</p>
+                        <p>Hair Color: {selectedHero2.hairColor}</p>
+                        <p>Height: {selectedHero2.height}</p>
+                        <p>Skin Color: {selectedHero2.skinColor}</p>
+                        <p>Alignment: {selectedHero2.alignment}</p>
+                        <p>Weight: {selectedHero2.weight}</p>
+                        <button onClick={() => window.open(selectedHero2.ddgButton)}>
+                          Search on DDG
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <p>Last Edited Time: {list.lastEditedTime}</p>
+                <p>Average Rating: {list.averageRating}</p>
+                <button onClick={() => {handleShowHeroes(list.heros); setSelectedList(list.name)}}>
+                  Show Heroes
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
         <button onClick={handleLogout}>Logout</button>
         <p>{user}</p>
       </div>
-    </div>
+    </div >
   );
 }
 

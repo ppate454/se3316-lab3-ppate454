@@ -432,6 +432,7 @@ app.get('/api/publicHeroLists', async (req, res) => {
                 name: listDetails.name,
                 creatorName: user.username,
                 lastEditedTime: listDetails.lastEditedTime,
+                heros: listDetails.heroCollection,
                 numberOfHeroes: listDetails.heroCollection.length,
                 averageRating: listDetails.reviews.length > 0 ? calculateAverageRating(listDetails.reviews) : 'No reviews',
             }));
