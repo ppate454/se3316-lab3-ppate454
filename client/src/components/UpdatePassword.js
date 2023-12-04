@@ -9,7 +9,7 @@ const UpdatePassword = () => {
 
   const handleUpdatePassword = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/update-password', {
+      const response = await fetch('/api/update-password', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ const UpdatePassword = () => {
       <p>{info}</p>
       <div>
         <nav>
-          <Link to="/login">Create Account</Link>
+          <Link to="/login">Login</Link>
         </nav>
       </div>
     </div>
