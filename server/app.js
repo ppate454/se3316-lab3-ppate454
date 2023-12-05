@@ -395,6 +395,10 @@ app.put('/api/editList/:email/:listName', async (req, res) => {
         const { email, listName } = req.params;
         const { description, heroCollection, visibility } = req.body;
 
+        if (!heroCollection || heroCollection.length === 0) {
+            return res.status(400).json({ message: 'heroCollection cannot be empty' });
+        }
+
         // Find the user by email
         let user = await User.findOne({ email });
 

@@ -32,12 +32,56 @@ function Dashboard() {
   const [editHeroCollection, setEditHeroCollection] = useState('');
   const [editVisibility, setEditVisibility] = useState('private');
   const [editInfo, setEditInfo] = useState('');
-  const [userLists, setUserLists] = useState([]); // State to store the user's lists
+  const [userLists, setUserLists] = useState([]);
 
   const [deleteListName, setDeleteListName] = useState('');
   const [deleteInfo, setDeleteInfo] = useState('');
-  const [userDeleteLists, setUserDeleteLists] = useState([]); // State to store the user's lists
+  const [userDeleteLists, setUserDeleteLists] = useState([]);
 
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [ratingList, setRatingList] = useState("")
+  const [listsForReview, setListsForReview] = useState([]);
+
+  const handleAddReview = async () => {
+    try {
+      const response = await fetch(`/api/addReview/${ratingList}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rating: rating,
+          comment: comment,
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(data);
+        setRating(0);
+        setComment('')
+        setRatingList('')
+        fetchPublicHeroLists()
+        // Optionally, update your state or perform other actions after adding the review
+      } else {
+        const errorData = await response.json();
+        console.error(`Error adding review: ${errorData.message}`);
+        // Optionally, update your state or show an error message
+      }
+    } catch (error) {
+      console.error('Failed to add review', error);
+      // Optionally, update your state or show an error message
+    }
+  };
+
+  const handleListSelect = (selectedListName) => {
+    const selectedList = userLists.find((list) => list.name === selectedListName);
+
+    setEditListDescription(selectedList.description || '');
+    setEditHeroCollection(selectedList.heroCollection.join(', ') || '');
+    setEditVisibility(selectedList.visibility || 'private');
+  };
 
   const deleteList = async () => {
     try {
@@ -78,11 +122,20 @@ function Dashboard() {
 
   useEffect(() => {
     // Fetch the user's lists when the component mounts
+    fetchPublicHeroLists();
     fetchUserLists();
   }, [user]);
 
   const editList = async () => {
     try {
+      const trimmedHeroCollection = editHeroCollection.trim();
+
+      // Check if heroCollection is empty or contains only spaces
+      if (trimmedHeroCollection === '') {
+        console.error('Hero IDs cannot be empty');
+        setEditInfo('Hero IDs cannot be empty');
+        return;
+      }
       const response = await fetch(`/api/editList/${user}/${editListName}`, {
         method: 'PUT',
         headers: {
@@ -103,6 +156,7 @@ function Dashboard() {
         setEditListDescription('');
         setEditHeroCollection('');
         setEditVisibility('private');
+        fetchUserLists()
       } else {
         const errorData = await response.json();
         setInfo(`Error editing list: ${errorData.message}`);
@@ -120,8 +174,8 @@ function Dashboard() {
 
       // Check if heroCollection is empty or contains only spaces
       if (trimmedHeroCollection === '') {
-        console.error('heroCollection cannot be empty');
-        setInfo('heroCollection cannot be empty');
+        console.error('Hero IDs cannot be empty');
+        setInfo('Hero IDs cannot be empty');
         return;
       }
       const response = await fetch('/api/createList', {
@@ -216,6 +270,7 @@ function Dashboard() {
       if (response.ok) {
         const data = await response.json();
         setPublicHeroLists(data);
+        setListsForReview(data)
       } else {
         console.error('Failed to fetch public hero lists');
       }
@@ -296,7 +351,7 @@ function Dashboard() {
               <li key={hero.id}>
                 <div>
                   <strong>{hero.name}</strong> - {hero.publisher}{' '}
-                  <button className='h'onClick={() => handleViewDetails(hero.id)}>View Details</button>
+                  <button className='h' onClick={() => handleViewDetails(hero.id)}>View Details</button>
                 </div>
                 {selectedHero && selectedHero.id === hero.id && (
                   <div className="hero-details">
@@ -325,7 +380,6 @@ function Dashboard() {
       </div>
       <div>
         <h2>Public Hero Lists</h2>
-        <button onClick={fetchPublicHeroLists}>Show</button>
         <ul>
           {publicHeroLists.map((list) => (
             <li key={list.name}>
@@ -369,6 +423,46 @@ function Dashboard() {
             </li>
           ))}
         </ul>
+      </div>
+      <div>
+        <h2>Add Review</h2>
+        <label htmlFor="selectListForReview">Select List for Review:</label>
+        <select
+          id="selectListForReview"
+          name="selectListForReview"
+          value={ratingList} 
+          onChange={(e) => {
+            setRatingList(e.target.value);
+          }}
+          required
+        >
+          <option value="" disabled>Select a List</option>
+          {listsForReview.map((list) => (
+            <option key={list.name} value={list.name}>{list.name}</option>
+          ))}
+        </select>
+        <label>
+          Rating:
+          <input
+            type="number"
+            name="rating"
+            value={rating}
+            onChange={(e) => setRating(parseInt(e.target.value, 10))}
+            min="0"
+            max="5"
+          />
+        </label>
+        <label>
+          Comment:
+          <textarea
+            name="comment"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+        </label>
+        <button type="button" onClick={handleAddReview}>
+          Add Review
+        </button>
       </div>
       <div>
         <h2>Personal Hero Lists</h2>
@@ -431,7 +525,10 @@ function Dashboard() {
               id="editListName"
               name="editListName"
               value={editListName}
-              onChange={(e) => setEditListName(e.target.value)}
+              onChange={(e) => {
+                setEditListName(e.target.value);
+                handleListSelect(e.target.value);
+              }}
               required
             >
               <option value="" disabled>Select a List</option>
