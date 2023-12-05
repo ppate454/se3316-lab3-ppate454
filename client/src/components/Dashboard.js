@@ -42,6 +42,7 @@ function Dashboard() {
   const [comment, setComment] = useState('');
   const [ratingList, setRatingList] = useState("")
   const [listsForReview, setListsForReview] = useState([]);
+  const [reviewInfo, setReviewInfo] = useState("")
 
   const handleAddReview = async () => {
     try {
@@ -53,6 +54,7 @@ function Dashboard() {
         body: JSON.stringify({
           rating: rating,
           comment: comment,
+          email: user,
         })
       });
 
@@ -63,6 +65,7 @@ function Dashboard() {
         setComment('')
         setRatingList('')
         fetchPublicHeroLists()
+        setReviewInfo(data.message)
         // Optionally, update your state or perform other actions after adding the review
       } else {
         const errorData = await response.json();
@@ -463,6 +466,7 @@ function Dashboard() {
         <button type="button" onClick={handleAddReview}>
           Add Review
         </button>
+        <p>{reviewInfo}</p>
       </div>
       <div>
         <h2>Personal Hero Lists</h2>

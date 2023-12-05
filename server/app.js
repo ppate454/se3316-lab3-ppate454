@@ -17,7 +17,7 @@ const LocalStrategy = require('passport-local')
 const bcrypt = require('bcrypt');
 const validator = require('validator')
 const session = require('express-session');
-
+const jwt = require('jsonwebtoken');
 
 mongoose.connect('mongodb+srv://ppate454:prey@cluster0.c8hmqab.mongodb.net/', {
     useNewUrlParser: true,
@@ -55,9 +55,11 @@ const User = mongoose.model('User', {
             visibility: { type: String, enum: ['public', 'private'], default: 'public' },
             lastEditedTime: { type: Date, default: Date.now },
             reviews: [{
-                rating: { type: [Number], required: true },
-                comment: { type: [String] }
-            }]
+                rating: { type: Number, required: true },
+                reviewUser: { type: String, required: true },
+                comment: { type: String },
+                creationDate: { type: Date, default: Date.now },
+            },]
         }],
         default: []
     }
@@ -171,7 +173,6 @@ app.post('/api/login', async (req, res, next) => {
             }
 
             if (!user) {
-                // Custom handling of unsuccessful authentication
                 return res.status(401).json({ message: info.message || 'Authentication failed' });
             }
 
@@ -182,18 +183,42 @@ app.post('/api/login', async (req, res, next) => {
                     return res.status(500).json({ message: 'Internal Server Error' });
                 }
 
-                // If verification is successful, respond with a success message and user details
-                return res.status(200).json({ message: 'Login successful', user });
+                // Generate a JWT token
+                const token = jwt.sign({ userId: user._id }, 'your_secret_key', { expiresIn: '1h' });
+
+                // Include the token in the response
+                return res.status(200).json({ message: 'Login successful', user, token });
             });
         })(req, res, next);
     } catch (error) {
         console.error('Error during authentication:', error);
-
-        // Extract the error message from Passport info object
         const errorMessage = error && error.info ? error.info.message : 'Authentication failed';
-
         return res.status(401).json({ message: errorMessage });
     }
+});
+
+const verifyToken = (req, res, next) => {
+    const token = req.headers.authorization;
+
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized - No token provided' });
+    }
+
+    jwt.verify(token, 'your_secret_key', (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: 'Unauthorized - Invalid token' });
+        }
+
+        // Attach the decoded user ID to the request object
+        req.userId = decoded.userId;
+        next();
+    });
+};
+
+// Example usage:
+app.get('/api/protectedRoute', verifyToken, (req, res) => {
+    // Your protected route logic here
+    res.json({ message: 'Protected route accessed successfully' });
 });
 
 app.get('/api/logout', (req, res) => {
@@ -272,11 +297,39 @@ app.get('/api/searchHero', (req, res) => {
     const { name, race, power, publisher } = req.query;
     const matchingSuper = [];
 
+    // Function to remove white spaces from a string
+    const removeWhiteSpace = str => str.replace(/\s/g, '');
+
+    // Function to compare two strings with a tolerance of up to two characters difference
+    const softMatch = (str1, str2) => {
+        if (str1 === str2 || str1.startsWith(str2)) {
+            return true;
+        }
+
+        if (str2.length > 3) {
+            const minLength = str2.length;
+            let diffCount = 0;
+
+            for (let i = 0; i < minLength; i++) {
+                if (str1[i] !== str2[i]) {
+                    diffCount++;
+                    if (diffCount > 2 || str1.length < 2) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    };
+
     for (const supes of superInfo) {
-        const isNameMatch = !name || supes.name.toLowerCase().startsWith(name.toLowerCase());
-        const isRaceMatch = !race || (supes.Race && supes.Race.toLowerCase().startsWith(race.toLowerCase()));
+        const isNameMatch = !name || softMatch(removeWhiteSpace(supes.name.toLowerCase()), removeWhiteSpace(name.toLowerCase()));
+        const isRaceMatch = !race || (supes.Race && softMatch(removeWhiteSpace(supes.Race.toLowerCase()), removeWhiteSpace(race.toLowerCase())));
         const isPowerMatch = !power || hasMatchingPower(supes, power);
-        const isPublisherMatch = !publisher || (supes.Publisher && supes.Publisher.toLowerCase().startsWith(publisher.toLowerCase()));
+        const isPublisherMatch = !publisher || (supes.Publisher && softMatch(removeWhiteSpace(supes.Publisher.toLowerCase()), removeWhiteSpace(publisher.toLowerCase())));
 
         if (isNameMatch && isRaceMatch && isPowerMatch && isPublisherMatch) {
             matchingSuper.push({
@@ -483,6 +536,7 @@ app.get('/api/publicHeroLists', async (req, res) => {
                     heros: listDetails.heroCollection,
                     numberOfHeroes: listDetails.heroCollection.length,
                     averageRating: listDetails.reviews.length > 0 ? calculateAverageRating(listDetails.reviews) : 'No reviews',
+
                 }));
             })
             .flat();
@@ -509,7 +563,7 @@ const calculateAverageRating = (reviews) => {
 
     // Use a for loop to calculate the sum of ratings
     for (let i = 0; i < reviews.length; i++) {
-        sumOfRatings += reviews[i].rating[0]; // Assuming rating is an array with a single value
+        sumOfRatings += reviews[i].rating; // Rating is a single value, not an array
     }
 
     // Calculate the average rating
@@ -543,7 +597,7 @@ app.get('/api/getList/:email', async (req, res) => {
 app.post('/api/addReview/:listName', async (req, res) => {
     try {
         const { listName } = req.params;
-        const { rating, comment } = req.body;
+        const { rating, comment, email } = req.body;
 
         // Check if rating is within the valid range (0-5)
         if (rating < 0 || rating > 5) {
@@ -553,7 +607,7 @@ app.post('/api/addReview/:listName', async (req, res) => {
         // Find the user by checking if the list exists with the given name and visibility
         const user = await User.findOne({
             'list.name': listName,
-            'list.visibility': 'public'
+            'list.visibility': 'public',
         });
 
         // Check if the user exists
@@ -562,12 +616,21 @@ app.post('/api/addReview/:listName', async (req, res) => {
         }
 
         // Find the index of the list in the user's array
-        const listIndex = user.list.findIndex(list => list.name === listName && list.visibility === 'public');
+        const listIndex = user.list.findIndex((list) => list.name === listName && list.visibility === 'public');
+
+        // Find the user by email
+        const name = await User.findOne({ email });
+
+        if (!name) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         // Create a new review
         const newReview = {
             rating: rating,
+            reviewUser: name.username,
             comment: comment || '', // Set default value or leave it empty
+            creationDate: Date.now(),
         };
 
         // Add the review to the list
