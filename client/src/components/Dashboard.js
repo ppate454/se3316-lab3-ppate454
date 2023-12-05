@@ -44,12 +44,15 @@ function Dashboard() {
   const [listsForReview, setListsForReview] = useState([]);
   const [reviewInfo, setReviewInfo] = useState("")
 
+  const storedValue = localStorage.getItem('key');
+
   const handleAddReview = async () => {
     try {
       const response = await fetch(`/api/addReview/${ratingList}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': storedValue,
         },
         body: JSON.stringify({
           rating: rating,
@@ -88,8 +91,11 @@ function Dashboard() {
 
   const deleteList = async () => {
     try {
-      const response = await fetch(`/api/deleteList/${user}/${deleteListName}`, {
+      const response = await fetch(`/api/deleteList/${deleteListName}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': storedValue,
+        },
       });
 
       if (response.ok) {
@@ -110,7 +116,14 @@ function Dashboard() {
 
   const fetchUserLists = async () => {
     try {
-      const response = await fetch(`/api/getList/${user}`);
+      const response = await fetch(`/api/getList`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': storedValue,
+        },
+      });
+
       if (response.ok) {
         const data = await response.json();
         setUserLists(data.lists);
@@ -139,10 +152,11 @@ function Dashboard() {
         setEditInfo('Hero IDs cannot be empty');
         return;
       }
-      const response = await fetch(`/api/editList/${user}/${editListName}`, {
+      const response = await fetch(`/api/editList/${editListName}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': storedValue,
         },
         body: JSON.stringify({
           description: editListDescription,
@@ -185,9 +199,10 @@ function Dashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': storedValue,
         },
         body: JSON.stringify({
-          email: user,
+
           name: newListName,
           description: newListDescription,
           heroCollection: newHeroCollection.split(',').map(id => Number(id.trim())),
@@ -433,7 +448,7 @@ function Dashboard() {
         <select
           id="selectListForReview"
           name="selectListForReview"
-          value={ratingList} 
+          value={ratingList}
           onChange={(e) => {
             setRatingList(e.target.value);
           }}

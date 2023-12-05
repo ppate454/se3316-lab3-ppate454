@@ -65,9 +65,13 @@ const User = mongoose.model('User', {
     }
 })
 
-//make passport for authenticate
-passport.use(new LocalStrategy({ usernameField: 'email' }, async function verify(email, password, cb) {
+
+// make passport for authenticate
+passport.use(new LocalStrategy({ usernameField: 'email', passReqToCallback: true }, async function verify(req, email, password, cb) {
     console.log(`${email} and ${password}`);
+    host = req.host
+    console.log(host)
+
     try {
         // Find user by email in MongoDB
         const user = await User.findOne({ email });
@@ -80,7 +84,7 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, async function verify
         }
         if (!user.verified) {
             console.log("unverified")
-            const verificationLink = `http://${req.headers.host}/api/verify/${email}/${user._id}`;
+            const verificationLink = `http://${host}:3001/api/verify/${email}/${user._id}`;
             // Use req.headers.host to dynamically get the host from the request
             return cb(null, false, { message: `Verify your email ${verificationLink}` });
         }
@@ -119,107 +123,6 @@ passport.deserializeUser(async (id, done) => {
         console.error('Error finding user by ID:', error);
         return done(error);
     }
-});
-
-//make item for registering
-app.post('/api/register', async (req, res) => {
-    try {
-        // Extract user information from the request body
-        const { email, username, password } = req.body;
-
-        // Validate email and password
-        if (!validator.isEmail(email) || password.length < 6) {
-            return res.status(400).json({ message: 'Invalid email or password format' });
-        }
-
-        // Check if the email is already registered
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(409).json({ message: 'Email already exists' });
-        }
-
-        // Hash the password using bcrypt
-        const saltRounds = 10;
-        const salt = await bcrypt.genSalt(saltRounds);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Create a new user object
-        const newUser = new User({
-            email,
-            username,
-            password: hashedPassword,
-            salt,
-        });
-
-        // Save the user to the database
-        await newUser.save();
-
-        //make unique verification link
-        const verificationLink = `http://localhost:3001/api/verify/${email}/${newUser._id}`;
-
-        return res.status(201).json({ message: `User registered successfully. Use ${verificationLink} to verify account` });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal Server Error' });
-    }
-});
-
-//login check
-app.post('/api/login', async (req, res, next) => {
-    try {
-        passport.authenticate('local', async (err, user, info) => {
-            if (err) {
-                console.error('Authentication error:', err);
-                return res.status(500).json({ message: 'Internal Server Error' });
-            }
-
-            if (!user) {
-                return res.status(401).json({ message: info.message || 'Authentication failed' });
-            }
-
-            // Manually log in the user
-            req.logIn(user, (loginErr) => {
-                if (loginErr) {
-                    console.error('Login error:', loginErr);
-                    return res.status(500).json({ message: 'Internal Server Error' });
-                }
-
-                // Generate a JWT token
-                const token = jwt.sign({ userId: user._id }, 'your_secret_key', { expiresIn: '1h' });
-
-                // Include the token in the response
-                return res.status(200).json({ message: 'Login successful', user, token });
-            });
-        })(req, res, next);
-    } catch (error) {
-        console.error('Error during authentication:', error);
-        const errorMessage = error && error.info ? error.info.message : 'Authentication failed';
-        return res.status(401).json({ message: errorMessage });
-    }
-});
-
-const verifyToken = (req, res, next) => {
-    const token = req.headers.authorization;
-
-    if (!token) {
-        return res.status(401).json({ message: 'Unauthorized - No token provided' });
-    }
-
-    jwt.verify(token, 'your_secret_key', (err, decoded) => {
-        if (err) {
-            return res.status(401).json({ message: 'Unauthorized - Invalid token' });
-        }
-
-        // Attach the decoded user ID to the request object
-        req.userId = decoded.userId;
-        next();
-    });
-};
-
-// Example usage:
-app.get('/api/protectedRoute', verifyToken, (req, res) => {
-    // Your protected route logic here
-    res.json({ message: 'Protected route accessed successfully' });
 });
 
 app.get('/api/logout', (req, res) => {
@@ -397,10 +300,107 @@ app.get('/api/searchHero/:id', (req, res) => {
     }
 });
 
-//creating list for user 
-app.post('/api/createList', async (req, res) => {
+//make item for registering
+app.post('/api/register', async (req, res) => {
     try {
-        const { email, name, description, heroCollection, visibility } = req.body;
+        // Extract user information from the request body
+        const { email, username, password } = req.body;
+
+        // Validate email and password
+        if (!validator.isEmail(email) || password.length < 6) {
+            return res.status(400).json({ message: 'Invalid email or password format' });
+        }
+
+        // Check if the email is already registered
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(409).json({ message: 'Email already exists' });
+        }
+
+        // Hash the password using bcrypt
+        const saltRounds = 10;
+        const salt = await bcrypt.genSalt(saltRounds);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create a new user object
+        const newUser = new User({
+            email,
+            username,
+            password: hashedPassword,
+            salt,
+        });
+
+        // Save the user to the database
+        await newUser.save();
+
+        //make unique verification link
+        const verificationLink = `http://${req.headers.host}/api/verify/${email}/${newUser._id}`;
+
+        return res.status(201).json({ message: `User registered successfully. Use ${verificationLink} to verify account` });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+// Example usage of passport.authenticate in a route
+app.post('/api/login', async (req, res, next) => {
+    try {
+        const host = req.headers.host; // Define host here
+        req.host = host
+
+        passport.authenticate('local', { host }, async (err, user, info) => {
+            if (err) {
+                console.error('Authentication error:', err);
+                return res.status(500).json({ message: 'Internal Server Error' });
+            }
+
+            if (!user) {
+                return res.status(401).json({ message: info.message || 'Authentication failed' });
+            }
+
+            // Manually log in the user
+            req.logIn(user, (loginErr) => {
+                if (loginErr) {
+                    console.error('Login error:', loginErr);
+                    return res.status(500).json({ message: 'Internal Server Error' });
+                }
+
+                // Generate a JWT token
+                const token = jwt.sign({ userId: user._id }, 'your_secret_key', { expiresIn: '24h' });
+                console.log(token)
+                // Include the token in the response
+                return res.status(200).json({ message: 'Login successful', user, token });
+            });
+        })(req, res, next);
+    } catch (error) {
+        console.error('Error during authentication:', error);
+        const errorMessage = error && error.info ? error.info.message : 'Authentication failed';
+        return res.status(401).json({ message: errorMessage });
+    }
+});
+
+const verifyToken = (req, res, next) => {
+    const token = req.headers.authorization;
+
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized - No token provided' });
+    }
+
+    jwt.verify(token, 'your_secret_key', (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: 'Unauthorized - Invalid token' });
+        }
+
+        // Attach the decoded user ID to the request object
+        req.userId = decoded.userId;
+        next();
+    });
+};
+
+app.post('/api/createList', verifyToken, async (req, res) => {
+    try {
+        const { name, description, heroCollection, visibility } = req.body;
 
         // Check if heroCollection has values and name length is > 0
         if (!heroCollection || heroCollection.length === 0) {
@@ -411,16 +411,16 @@ app.post('/api/createList', async (req, res) => {
             return res.status(400).json({ message: 'List name cannot be empty' });
         }
 
-        // Check if the list name already exists for any user
-        const listExists = await User.exists({ 'list.name': name });
+        // Check if the list name already exists for the user
+        const listExists = await User.exists({ _id: req.userId, 'list.name': name });
         if (listExists) {
             return res.status(409).json({ message: 'List name already exists' });
         }
 
-        // Find the user by email
-        let user = await User.findOne({ email });
+        // Find the user by ID
+        let user = await User.findById(req.userId);
 
-        // If the user does not exist, create a new user
+        // If the user does not exist, handle accordingly
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -432,7 +432,7 @@ app.post('/api/createList', async (req, res) => {
             visibility: visibility || 'private',
             lastEditedTime: new Date(),
         };
-        console.log("added list")
+
         user.list.push(newList);
         await user.save();
 
@@ -443,18 +443,18 @@ app.post('/api/createList', async (req, res) => {
     }
 });
 
-//editing list based on correct email primary key and unique list name
-app.put('/api/editList/:email/:listName', async (req, res) => {
+app.put('/api/editList/:listName', verifyToken, async (req, res) => {
     try {
-        const { email, listName } = req.params;
+        const { listName } = req.params;
         const { description, heroCollection, visibility } = req.body;
+        const userId = req.userId; // Use userId from JWT token
 
         if (!heroCollection || heroCollection.length === 0) {
             return res.status(400).json({ message: 'heroCollection cannot be empty' });
         }
 
-        // Find the user by email
-        let user = await User.findOne({ email });
+        // Find the user by userId
+        let user = await User.findById(userId);
 
         // If the user does not exist, return a 404 error
         if (!user) {
@@ -484,13 +484,13 @@ app.put('/api/editList/:email/:listName', async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
-
-app.delete('/api/deleteList/:email/:listName', async (req, res) => {
+app.delete('/api/deleteList/:listName', verifyToken, async (req, res) => {
     try {
-        const { email, listName } = req.params;
+        const { listName } = req.params;
+        const userId = req.userId; // Use userId from JWT token
 
-        // Find the user by email
-        const user = await User.findOne({ email });
+        // Find the user by userId
+        const user = await User.findById(userId);
 
         // Check if the user exists
         if (!user) {
@@ -517,7 +517,6 @@ app.delete('/api/deleteList/:email/:listName', async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
-
 //get 10 most recent lists to display
 app.get('/api/publicHeroLists', async (req, res) => {
     try {
@@ -574,13 +573,12 @@ const calculateAverageRating = (reviews) => {
     return Math.round(averageRating * 100) / 100;
 };
 
-// Assuming you are using Express.js
-app.get('/api/getList/:email', async (req, res) => {
+app.get('/api/getList', verifyToken, async (req, res) => {
     try {
-        const { email } = req.params;
+        const userId = req.userId; // Use userId from JWT token
 
-        // Find the user by email
-        const user = await User.findOne({ email });
+        // Find the user by userId
+        const user = await User.findById(userId);
 
         // If the user does not exist, return a 404 error
         if (!user) {
@@ -595,32 +593,35 @@ app.get('/api/getList/:email', async (req, res) => {
     }
 });
 
-app.post('/api/addReview/:listName', async (req, res) => {
+app.post('/api/addReview/:listName', verifyToken, async (req, res) => {
     try {
         const { listName } = req.params;
-        const { rating, comment, email } = req.body;
+        const { rating, comment } = req.body;
+        const userId = req.userId; // Use userId from JWT token
 
         // Check if rating is within the valid range (0-5)
         if (rating < 0 || rating > 5) {
             return res.status(400).json({ message: 'Invalid rating. Rating must be between 0 and 5.' });
         }
 
-        // Find the user by checking if the list exists with the given name and visibility
-        const user = await User.findOne({
-            'list.name': listName,
-            'list.visibility': 'public',
-        });
+        // Find the user by userId
+        const user = await User.findById(userId);
 
         // Check if the user exists
         if (!user) {
-            return res.status(404).json({ message: 'List not found or not public' });
+            return res.status(404).json({ message: 'User not found' });
         }
 
         // Find the index of the list in the user's array
-        const listIndex = user.list.findIndex((list) => list.name === listName && list.visibility === 'public');
+        const listIndex = user.list.findIndex((list) => list.name === listName);
 
-        // Find the user by email
-        const name = await User.findOne({ email });
+        // Check if the list exists
+        if (listIndex === -1) {
+            return res.status(404).json({ message: 'List not found' });
+        }
+
+        // Find the user by userId
+        const name = await User.findById(userId);
 
         if (!name) {
             return res.status(404).json({ message: 'User not found' });
