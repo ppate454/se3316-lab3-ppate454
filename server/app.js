@@ -80,7 +80,8 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, async function verify
         }
         if (!user.verified) {
             console.log("unverified")
-            const verificationLink = `http://localhost:3001/api/verify/${email}/${user._id}`;
+            const verificationLink = `http://${req.headers.host}/api/verify/${email}/${user._id}`;
+            // Use req.headers.host to dynamically get the host from the request
             return cb(null, false, { message: `Verify your email ${verificationLink}` });
         }
 
