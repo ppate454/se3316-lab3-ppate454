@@ -22,9 +22,10 @@ const Login = () => {
 
       if (response.ok) {
         // Assuming your backend sends a user object upon successful login
-        const { user, token } = await response.json();
+        const { user, token, priv } = await response.json();
         
         localStorage.setItem('key', token)
+        localStorage.setItem('priv', priv)
         console.log('Login successful:', user);
         loginUser(email);
         // Redirect to a dashboard or home page after successful login

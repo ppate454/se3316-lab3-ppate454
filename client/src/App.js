@@ -6,6 +6,7 @@ import Login from './components/Login';
 import CreateAccount from './components/Register';
 import Dashboard from './components/Dashboard';
 import UpdatePassword from './components/UpdatePassword';
+import Admin from './components/Admin';
 
 function App() {
   return (
@@ -25,6 +26,8 @@ function App() {
           </Route>
 
           <Route path="/update-password" component={UpdatePassword} />
+
+          <Route path="/admin" component={Admin} />
 
           {/* Route for Login component */}
           <Route path="/login" component={Login} />

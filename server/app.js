@@ -39,7 +39,6 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-
 const User = mongoose.model('User', {
     email: { type: String, required: true, unique: true },
     username: { type: String, required: true },
@@ -47,6 +46,7 @@ const User = mongoose.model('User', {
     salt: { type: String, required: true },
     disabled: { type: Boolean, default: false },
     verified: { type: Boolean, default: false },
+    isAdmin: { type: Boolean, default: false },
     list: {
         type: [{
             name: { type: String, unique: true, required: true },
@@ -59,6 +59,7 @@ const User = mongoose.model('User', {
                 reviewUser: { type: String, required: true },
                 comment: { type: String },
                 creationDate: { type: Date, default: Date.now },
+                hidden: { type: Boolean, default: false }
             },]
         }],
         default: []
@@ -142,7 +143,6 @@ app.put('/api/update-password', async (req, res) => {
         // Implement your password update logic here
         // Verify the user's current password, and update it with the new one
 
-        // Example: Find the user by email
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -365,12 +365,13 @@ app.post('/api/login', async (req, res, next) => {
                     console.error('Login error:', loginErr);
                     return res.status(500).json({ message: 'Internal Server Error' });
                 }
-
+                const priv = user.isAdmin;
+                console.log(priv)
                 // Generate a JWT token
                 const token = jwt.sign({ userId: user._id }, 'your_secret_key', { expiresIn: '24h' });
                 console.log(token)
                 // Include the token in the response
-                return res.status(200).json({ message: 'Login successful', user, token });
+                return res.status(200).json({ message: 'Login successful', user, token, priv });
             });
         })(req, res, next);
     } catch (error) {
@@ -642,6 +643,123 @@ app.post('/api/addReview/:listName', verifyToken, async (req, res) => {
         await user.save();
 
         res.status(201).json({ message: 'Review added successfully', review: newReview });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+// Add this route to get all users (requires admin privilege)
+app.get('/api/getAllNonAdminEmails', async (req, res) => {
+    try {
+        // Find all non-admin users and select only email addresses
+        const nonAdminUsers = await User.find({ isAdmin: false }, { _id: 0, email: 1 });
+
+        // Extract emails from non-admin users
+        const nonAdminEmails = nonAdminUsers.map(user => user.email);
+        console.log(nonAdminEmails)
+        res.status(200).json({ emails: nonAdminEmails });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.put('/api/makeAdmin/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        // Find the user by userId
+        const user = await User.findOne({ email: email });
+
+        // Check if the user exists
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the user's isAdmin field to true
+        user.isAdmin = true;
+
+        // Save the updated user object
+        await user.save();
+
+        res.status(200).json({ message: 'User is now an admin', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.put('/api/disableUser/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        // Find the user by email
+        const user = await User.findOne({ email: email });
+
+        // Check if the user exists
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the user's disabled field to true
+        user.disabled = true;
+
+        // Save the updated user object
+        await user.save();
+
+        res.status(200).json({ message: 'User account disabled', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+// Add this route to undisable a user account (requires admin privilege)
+app.put('/api/undisableUser/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        // Find the user by email
+        const user = await User.findOne({ email: email });
+
+        // Check if the user exists
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the user's disabled field to false
+        user.disabled = false;
+
+        // Save the updated user object
+        await user.save();
+
+        res.status(200).json({ message: 'User account undisabled', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.get('/api/reviews/:listName', async (req, res) => {
+    const { listName } = req.params;
+
+    try {
+        const user = await User.findOne({ 'list.name': listName });
+
+        if (!user) {
+            return res.status(404).json({ message: 'List not found' });
+        }
+
+        const list = user.list.find((listItem) => listItem.name === listName);
+
+        if (!list) {
+            return res.status(404).json({ message: 'List not found' });
+        }
+
+        const reviews = list.reviews;
+
+        res.json({ reviews });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });

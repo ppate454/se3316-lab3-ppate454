@@ -140,6 +140,9 @@ function Dashboard() {
     // Fetch the user's lists when the component mounts
     fetchPublicHeroLists();
     fetchUserLists();
+    if (priv == 'true') {
+      setIfAdminInfo("Admin")
+    }
   }, [user]);
 
   const editList = async () => {
@@ -323,8 +326,22 @@ function Dashboard() {
       console.error('Logout failed', error);
     }
   };
+
+  const handleAdminClick = () => {
+    if (priv == 'true') {
+      history.push('/admin');
+    } else {
+      setAdminInfo("User is not an admin")
+    }
+  };
+
+  const priv = localStorage.getItem('priv');
+  const [adminInfo, setAdminInfo] = useState('')
+  const [ifadminInfo, setIfAdminInfo] = useState('')
+
   return (
     <div>
+      <p>{ifadminInfo}</p>
       <header>
         <h1>Hero List Manager</h1>
         <p>
@@ -333,6 +350,10 @@ function Dashboard() {
           by adding comments and ratings to individual heroes and lists. Additionally, administrators have access to
           manage user accounts and handle copyright-related tasks.
         </p>
+        <button onClick={handleAdminClick}>
+          Go to Admin
+        </button>
+        <p>{adminInfo}</p>
       </header>
       <div>
         <h2>Hero Search</h2>
