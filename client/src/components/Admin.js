@@ -6,7 +6,8 @@ const Admin = () => {
     const [nonAdminEmails, setNonAdminEmails] = useState([]);
     const [info, setInfo] = useState([]);
     const [publicHeroLists, setPublicHeroLists] = useState([]);
-    const [list, setList] = useState('')
+    const [selectedList, setSelectedList] = useState('');
+    const [reviews, setReviews] = useState([]);
 
 
     const fetchNonAdminEmails = () => {
@@ -14,6 +15,20 @@ const Admin = () => {
             .then(response => response.json())
             .then(data => setNonAdminEmails(data.emails))
             .catch(error => console.error('Error fetching non-admin user emails:', error));
+    };
+
+    const fetchReviews = async (listName) => {
+        try {
+            const response = await fetch(`/api/reviews/${listName}`);
+            if (response.ok) {
+                const data = await response.json();
+                setReviews(data.reviews);
+            } else {
+                console.error(`Failed to fetch reviews for ${listName}`);
+            }
+        } catch (error) {
+            console.error(`Failed to fetch reviews for ${listName}`, error);
+        }
     };
 
     const fetchPublicHeroLists = async () => {
@@ -36,8 +51,12 @@ const Admin = () => {
         fetchPublicHeroLists();
     }, []);
 
-    const handleListChange = (event) => {
-        setList(event)
+    const handleListChange = async (event) => {
+        const selectedList = event.target.value;
+        setSelectedList(selectedList);
+
+        // Call fetchReviews and update the reviews state
+        await fetchReviews(selectedList);
     };
 
     const handleUserChange = (event) => {
@@ -142,6 +161,20 @@ const Admin = () => {
                         </option>
                     ))}
                 </select>
+            </div>
+            <div>
+                <h3>Reviews for {selectedList}:</h3>
+                {reviews.length > 0 ? (
+                    <ul>
+                        {reviews.map((review, index) => (
+                            <li key={index}>
+                                {review.rating} {review.comment} by {review.reviewUser}
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p>No reviews available for {selectedList}.</p>
+                )}
             </div>
         </div>
     );

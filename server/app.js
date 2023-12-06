@@ -758,8 +758,43 @@ app.get('/api/reviews/:listName', async (req, res) => {
         }
 
         const reviews = list.reviews;
+        console.log(reviews)
 
         res.json({ reviews });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.put('/api/reviews/:listName/:reviewId', async (req, res) => {
+    const { listName, reviewId } = req.params;
+    const { hidden } = req.body;
+
+    try {
+        const user = await User.findOne({ 'list.name': listName });
+
+        if (!user) {
+            return res.status(404).json({ message: 'List not found' });
+        }
+
+        const list = user.list.find((listItem) => listItem.name === listName);
+
+        if (!list) {
+            return res.status(404).json({ message: 'List not found' });
+        }
+
+        const review = list.reviews.id(reviewId);
+
+        if (!review) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        review.hidden = hidden;
+
+        await user.save();
+
+        res.json({ message: 'Review hidden status updated successfully' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
